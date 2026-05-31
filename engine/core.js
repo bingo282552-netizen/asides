@@ -318,7 +318,7 @@ function applyLoadedState(data){
   G.sponsors=(G.sponsors||SPONSORS).map(s=>({...s}));
   G.aiClubs=(G.aiClubs?.length?G.aiClubs:AI_CLUBS).map(c=>({...c,squad:c.squad||[],activities:c.activities||[]}));
   if(!G.marketPlayers?.length)refreshTransferMarketPool(true);
-  if(!G.loanPlayers?.length)G.loanPlayers=sampleWorldMarket(24).filter(p=>p.age<=25).slice(0,12);
+  G.loanPlayers=[];
   normalizeRealPlayerCards();
   backfillLeagueRatings();
   catchUpAILeagueTable();

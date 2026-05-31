@@ -265,22 +265,10 @@ function renewContract(id){
   updateHUD();notify(`📄 ต่อสัญญา ${p.name} 3 ปี (+${Math.round(loyaltyBonus*100)}%)`,'green');renderContracts();
 }
 function renderLoans(){
-  document.getElementById('loan-list').innerHTML=G.loanPlayers.map(p=>`
-    <div class="fbtw" style="padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem;">
-      <div class="fb gap" style="align-items:center;">
-        <span>${p.nat}${p.face}</span>
-        <div><div style="font-weight:700;">${playerCardName(p)} ${cardTierBadge(p)} <span class="tg">${p.ovr}</span></div>
-        <div class="tm">${p.pos} · POT${p.potential} · อายุ${p.age}</div></div>
-      </div>
-      <button class="btn bbl bsm" onclick="loanPlayer('${p.id}')">ยืมตัว (ฟรี)</button>
-    </div>`).join('')||'<div class="tm">ไม่มีนักเตะให้ยืม</div>';
+  G.loanPlayers=[];
 }
 function loanPlayer(id){
-  const p=G.loanPlayers.find(x=>x.id===id);if(!p)return;
-  if(!hasSquadSlot()){notify(squadFullMessage(),'red');return;}
-  p.onLoan=true;p.loanMonths=3;
-  G.squad.push({...p,id:uid(),acquisition:'loan',isInitialSquad:false});G.loanPlayers=G.loanPlayers.filter(x=>x.id!==id);
-  notify(`🔗 ยืมตัว ${p.name} สำเร็จ (3 เดือน)`,'green');renderLoans();
+  notify('ระบบยืมตัวถูกปิดแล้ว','red');
 }
 
 // ===== AI CLUBS =====

@@ -18,7 +18,7 @@ function renderClubDNA(){
     <div style="font-size:1.3rem;margin-bottom:4px;">${owner.label}</div>
     <div class="tm" style="font-size:.8rem;margin-bottom:.5rem;">${owner.desc}</div>
     <div class="g2">
-      <div class="fbtw"><span class="tm">งบโบนัส/ซีซั่น</span><span class="tgr">+${fmt(owner.budgetBonus)}</span></div>
+      <div class="fbtw"><span class="tm">งบโบนัส/ซีซั่น</span><span class="tm">ไม่มีโบนัสเงิน</span></div>
       <div class="fbtw"><span class="tm">ความอดทน</span><span class="tg">${owner.boardTolerance} คำเตือน</span></div>
     </div>
     <div class="fb gap" style="margin-top:.5rem;flex-wrap:wrap;">
@@ -43,8 +43,6 @@ function selectDNA(id){
 function changeOwner(id){
   G.ownerType=id;
   const o=OWNER_TYPES.find(x=>x.id===id);
-  G.money+=o.budgetBonus;
-  updateHUD();
   notify(`🏢 เจ้าของใหม่: ${o.label}`,'green');
   renderClubDNA();
 }

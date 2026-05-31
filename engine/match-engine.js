@@ -18,6 +18,51 @@ function scheduleCupAfterLeagueWeek(){
     G.pendingCupMatch={type:'domestic',label:'FA Cup',opponent:cupOpponent()};
   }
 }
+function roleWeightForShot(p){
+  const pos=p?.pos||'';
+  if(pos==='ST')return 5;
+  if(['LW','RW'].includes(pos))return 3.6;
+  if(pos==='CAM')return 2.6;
+  if(['CM','CDM'].includes(pos))return 1.4;
+  if(['CB','LB','RB'].includes(pos))return .7;
+  return .15;
+}
+function roleWeightForAssist(p){
+  const pos=p?.pos||'';
+  if(['CAM','CM'].includes(pos))return 4;
+  if(['LW','RW'].includes(pos))return 3.4;
+  if(['CDM','LB','RB'].includes(pos))return 1.8;
+  if(pos==='ST')return 1.1;
+  return .25;
+}
+function weightedPick(players,weightFn){
+  const pool=players.filter(Boolean);
+  const weights=pool.map(p=>Math.max(.1,weightFn(p)));
+  const total=weights.reduce((a,b)=>a+b,0);
+  let roll=Math.random()*total;
+  for(let i=0;i<pool.length;i++){
+    roll-=weights[i];
+    if(roll<=0)return pool[i];
+  }
+  return pool[pool.length-1]||null;
+}
+function matchStatFor(p){
+  if(!p)return null;
+  G.matchPlayerStats=G.matchPlayerStats||{};
+  G.matchPlayerStats[p.id]=G.matchPlayerStats[p.id]||{goals:0,assists:0,shots:0,keyPasses:0,tackles:0};
+  return G.matchPlayerStats[p.id];
+}
+function pickHumanShooter(){
+  const lineup=getLineupPlayerPool().filter(p=>!p.injured&&!(p.suspendedMatches>0));
+  return weightedPick(lineup,p=>roleWeightForShot(p)+((p.stats?.SHO||55)-55)/18+Math.random()*1.1);
+}
+function pickHumanAssister(scorer=null){
+  const lineup=getLineupPlayerPool().filter(p=>p.id!==scorer?.id&&!p.injured&&!(p.suspendedMatches>0));
+  return weightedPick(lineup,p=>roleWeightForAssist(p)+((p.stats?.PAS||55)-55)/22+((p.stats?.VIS||55)-55)/35+Math.random());
+}
+function addMatchVizEvent(type,team,player=null,target=null){
+  G.matchViz={type,team,playerId:player?.id||'',targetId:target?.id||'',tick:(G.matchViz?.tick||0)+1,minute:G.minute||0};
+}
 function resolveCupMatch(result){
   const type=G.matchCompetition;
   const run=G.cupRuns?.[type];if(!run)return result;
@@ -65,6 +110,8 @@ function startMatch(){
   G.matchMaxMinute=90;G.extraTimePlayed=false;G.pendingPenalty=false;
   G.matchRunning=true;G.matchPaused=false;
   G.matchGoalScorers=[];
+  G.matchPlayerStats={};
+  G.matchViz={type:'kickoff',team:'home',tick:0,minute:0};
   ['m-hn','m-an'].forEach((id,i)=>document.getElementById(id).textContent=i===0?G.teamName:G.oppName);
   ['m-hs','m-as'].forEach(id=>document.getElementById(id).textContent='0');
   document.getElementById('m-min').textContent='⏱ 0\'';
@@ -79,16 +126,18 @@ function startMatch(){
   document.getElementById('m-ratings').innerHTML='';
   const myStr=calcTeamStrength();
   const rawOppOVR=G.oppXI.length?calcAIClubStrength(oppClub,G.oppXI):(G.leagueTable.find(t=>t.name===G.oppName)?.rating||getLeagueClubRating(G.oppName));
-  const adaptiveBoost=clamp(Math.floor((G.clubStats.won||0)/4)-Math.floor((G.clubStats.lost||0)/5),0,4);
-  const maxAIAdvantage=(window.SUPERKICK_FEATURE_CONFIG?.clubs?.aiMaxAdvantage??4)+adaptiveBoost;
-  const oppOVR=Math.round(clamp(rawOppOVR,myStr.total-2,myStr.total+maxAIAdvantage));
+  const formBoost=clamp(Math.floor((G.clubStats.won||0)/3)-Math.floor((G.clubStats.lost||0)/4),0,7);
+  const tableBoost=clamp((G.leagueTable.find(t=>t.name===G.oppName)?.pts||0)-(G.leagueTable.find(t=>t.isMe)?.pts||0),-6,8)/3;
+  const styleBoost=oppClub?.style==='press'||oppClub?.style==='attack'?1.5:oppClub?.style==='possession'?1:0;
+  const maxAIAdvantage=(window.SUPERKICK_FEATURE_CONFIG?.clubs?.aiMaxAdvantage??7)+formBoost;
+  const oppOVR=Math.round(clamp(rawOppOVR+tableBoost+styleBoost+Math.random()*3,myStr.total-1,myStr.total+maxAIAdvantage));
   G.matchRawOpponentStrength=rawOppOVR;G.matchOpponentStrength=oppOVR;
   const famBonus=getFormFam()/1000;
   const chemBonus=(calcChemistry()-70)/1000;
   const myAdv=(myStr.total-oppOVR)/100;
   const wMod=getWeatherMatchMod();
   const cardMult=getRefereeCardMult();
-  const speed=parseInt(document.getElementById('m-speed').value)||600;
+  const speed=600;
   const tempGoalScorers={};
   renderMatchDashboard(myStr,oppOVR);
   setTimeout(()=>document.getElementById('mp-pitch')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
@@ -101,51 +150,61 @@ function startMatch(){
     if(G.minute===45){openHalfTimeAdjustments();return;}
     if(G.minute===46)document.getElementById('m-half').textContent='ครึ่งหลัง';
     if(G.minute===91)document.getElementById('m-half').textContent='ต่อเวลา';
-    if(G.minute%5===0)renderMatchDashboard(myStr,oppOVR);
+    renderMatchDashboard(myStr,oppOVR);
     if(G.minute%rnd(6,12)===0){
       const livePlan=getTacticalPlan();
-      const isAtt=Math.random()<0.5+myAdv+livePlan.attBonus+famBonus+chemBonus;
+      const aiEdge=(oppOVR-myStr.total)/130;
+      const isAtt=Math.random()<clamp(0.49+myAdv*.75+livePlan.attBonus*.75+famBonus+chemBonus-aiEdge,-.1,.82);
       if(isAtt){
         G.matchShots[0]++;
-        // ATTACK ENGINE: shooter stat vs opp defense
         const lineup=getLineupPlayerPool();
-        const fwd=lineup.filter(p=>['ST','LW','RW'].includes(p.pos)&&!p.injured).sort((a,b)=>b.stats.SHO-a.stats.SHO)[0]||lineup[0];
-        const shooterQuality=(fwd?fwd.stats.SHO:70)/99;
-        const defQuality=0.55;
+        const shooter=pickHumanShooter()||lineup[0];
+        const assister=pickHumanAssister(shooter);
+        if(shooter)matchStatFor(shooter).shots++;
+        if(assister)matchStatFor(assister).keyPasses++;
+        addMatchVizEvent(Math.random()<.48?'pass':'dribble','home',assister||shooter,shooter);
+        if(Math.random()<.28&&assister&&shooter)addEv(`🔁 ${assister.name} จ่ายให้ ${shooter.name} ลุ้นยิง (${G.minute}\')`,'save');
+        else if(Math.random()<.18&&shooter)addEv(`⚔️ ${shooter.name} พาบอลขึ้นหน้า (${G.minute}\')`,'save');
+        const shooterQuality=(shooter?((shooter.stats.SHO||60)*.65+(shooter.stats.COM||60)*.2+(shooter.stats.DEC||60)*.15):70)/99;
+        const defQuality=clamp((oppOVR+8)/108,.52,.96);
         if(Math.random()<.028){openPenaltyChoice();return;}
-        const goalChance=0.15+myAdv*0.4+livePlan.attBonus+(shooterQuality-defQuality)*0.4+wMod.att;
+        const goalChance=clamp(0.105+myAdv*0.25+livePlan.attBonus*.55+(shooterQuality-defQuality)*0.34+wMod.att,.035,.32);
         if(Math.random()<goalChance){
           G.myG++;
-          const scorer=G.squad.filter(p=>['ST','LW','RW','CAM'].includes(p.pos)&&!p.injured).sort((a,b)=>b.stats.SHO-a.stats.SHO)[0]||G.squad.filter(p=>!p.injured)[0];
+          const scorer=shooter||pickHumanShooter();
           if(scorer){
             scorer.goals++;
+            matchStatFor(scorer).goals++;
             recordStat('topScorers',scorer.id,{...scorer,club:G.teamName},'goals');
             tempGoalScorers[scorer.id]=(tempGoalScorers[scorer.id]||0)+1;
           }
-          const mid=G.squad.filter(p=>['CAM','CM','LW','RW'].includes(p.pos)&&p.id!==scorer?.id&&!p.injured)[0];
-          if(mid){mid.assists++;recordStat('topAssists',mid.id,{...mid,club:G.teamName},'assists');}
+          const mid=assister&&assister.id!==scorer?.id?assister:null;
+          if(mid){mid.assists++;matchStatFor(mid).assists++;recordStat('topAssists',mid.id,{...mid,club:G.teamName},'assists');}
+          addMatchVizEvent('goal','home',scorer,mid);
           addEv(`⚽ ${scorer?.name||'นักเตะ'} ทำประตู! ${mid?'(🎯 '+mid.name+')':''}  (${G.minute}\')`,'goal');
           if(window.playGoalSound)playGoalSound();
           document.getElementById('m-hs').textContent=G.myG;
           if(G.minute<=45)G.halfStats.first.myG++;else G.halfStats.second.myG++;
-        }else{addEv(`💨 ยิงพลาด — ${fwd?.name||'ST'} (${G.minute}\')`,'miss');}
+        }else{addMatchVizEvent('shot','home',shooter,assister);addEv(`💨 ยิงพลาด — ${shooter?.name||'นักเตะ'} (${G.minute}\')`,'miss');}
       }else{
         G.matchShots[1]++;
         const gk=getLineupPlayerPool().find(p=>p.pos==='GK'&&!p.injured);
         const aiShooter=pickAIMatchPlayer(['ST','LW','RW','CAM'],'SHO');
-        // DEFENSE ENGINE: opp attack vs GK quality
         const gkQuality=gk?(gk.stats.REF+gk.stats.HAN)/198:0.5;
         const oppAttQuality=(aiShooter?.stats?.SHO||oppOVR)/99;
-        const concedeChance=0.18-myAdv*0.4-livePlan.defBonus-(gkQuality-oppAttQuality)*0.3+wMod.def;
+        const tackle=weightedPick(getLineupPlayerPool().filter(p=>['CB','LB','RB','CDM','CM'].includes(p.pos)),p=>((p.stats?.TAC||55)+(p.stats?.POS||55))/45);
+        if(tackle&&Math.random()<.38){matchStatFor(tackle).tackles++;addMatchVizEvent('tackle','away',aiShooter,tackle);addEv(`🛡️ ${tackle.name} เข้าปะทะหยุดเกมบุก (${G.minute}\')`,'save');}
+        const concedeChance=clamp(0.145-myAdv*0.24-livePlan.defBonus*.55-(gkQuality-oppAttQuality)*0.24+wMod.def+aiEdge*.45,.045,.35);
         if(Math.random()<concedeChance){
           G.oppG++;
           const aiAssist=pickAIMatchPlayer(['CAM','CM','LW','RW'],'PAS');
           registerAIGoal(aiShooter,aiAssist);
+          addMatchVizEvent('goal','away',aiShooter,aiAssist);
           addEv(`😰 ${aiShooter?.name||G.oppName} ทำประตูให้ ${G.oppName}! ${aiAssist&&aiAssist.id!==aiShooter?.id?'(🎯 '+aiAssist.name+')':''} (${G.minute}\')`,'goal');
           if(window.playGoalSound)playGoalSound();
           document.getElementById('m-as').textContent=G.oppG;
           if(G.minute<=45)G.halfStats.first.oppG++;else G.halfStats.second.oppG++;
-        }else{addEv(`🧤 ${gk?.name||'GK'} เซฟลูกยิงของ ${aiShooter?.name||G.oppName}! (${G.minute}\')`,'save');}
+        }else{addMatchVizEvent('shot','away',aiShooter,gk);addEv(`🧤 ${gk?.name||'GK'} เซฟลูกยิงของ ${aiShooter?.name||G.oppName}! (${G.minute}\')`,'save');}
       }
       // Yellow card
       if(Math.random()<(0.035+getTacticalPlan().risk)*cardMult){
@@ -203,7 +262,7 @@ function openHalfTimeAdjustments(){
     <div class="mb"><label class="tm">สไตล์ครึ่งหลัง</label>
       <select id="ht-style"><option value="balanced">สมดุล</option><option value="attack">บุก</option><option value="defend">รับ</option><option value="counter">ตีโต้</option><option value="press">กดดัน</option><option value="possession">ครองบอล</option></select>
     </div>
-    <div class="fbtw mb"><span class="tm">ความเร็วเกม</span><input id="ht-tempo" type="range" min="1" max="10" value="${G.tacticPlan.tempo}" style="width:55%;"></div>
+    <div class="fbtw mb"><span class="tm">จังหวะเกม</span><input id="ht-tempo" type="range" min="1" max="10" value="${G.tacticPlan.tempo}" style="width:55%;"></div>
     <div class="fbtw mb"><span class="tm">แนวรับ</span><input id="ht-defline" type="range" min="1" max="10" value="${G.tacticPlan.defline}" style="width:55%;"></div>
     <div class="fb gap"><button class="btn bg" onclick="applyHalfTimeAdjustments()">เล่นครึ่งหลัง</button><button class="btn bbl" onclick="openSubstitutionPanel()">เปลี่ยนตัว</button></div>`;
   const style=document.getElementById('ht-style');if(style)style.value=G.tacStyle||'balanced';
@@ -233,6 +292,8 @@ function takePenalty(id){
   G.pendingPenalty=false;closeM('modal-penalty');
   if(scored){
     G.myG++;p.goals=(p.goals||0)+1;recordStat('topScorers',p.id,{...p,club:G.teamName},'goals');
+    matchStatFor(p).goals++;
+    matchStatFor(p).shots++;
     document.getElementById('m-hs').textContent=G.myG;
     if(G.minute<=45)G.halfStats.first.myG++;else G.halfStats.second.myG++;
     addEv(`⚽ ${p.name} ยิงจุดโทษเข้า! (${G.minute}')`,'goal');
@@ -288,7 +349,23 @@ function renderMatchDashboard(myStr=null,oppStr=null,finalResult=''){
     const wobble=G.matchRunning?Math.cos((G.minute+i*2)*.31)*2.5:0;
     return `<div class="mp-dot mp-away${G.matchRunning?' live':''}" style="left:${clamp(x.slot.x+wobble,5,95)}%;top:${clamp(x.slot.y-wobble/2,5,95)}%;opacity:.78;"><div class="mp-ball">${x.slot.p}</div><div class="mp-name">${name}</div>${x.p?`<div class="mp-rating">OVR ${x.p.ovr}</div>`:''}</div>`;
   }).join('');
-  pitch.innerHTML=home+away;
+  const allHome=slots.map((sl,i)=>({x:sl.x,y:sl.y,p:G.slots?.[i]?G.squad.find(x=>x.id===G.slots[i]):null}));
+  const allAway=awayEntries.map(x=>({x:x.slot.x,y:x.slot.y,p:x.p}));
+  const viz=G.matchViz||{};
+  const homeTarget=allHome.find(x=>x.p?.id===viz.playerId)||allHome[(G.minute+3)%Math.max(1,allHome.length)]||{x:50,y:50};
+  const homeMate=allHome.find(x=>x.p?.id===viz.targetId)||allHome[(G.minute+7)%Math.max(1,allHome.length)]||homeTarget;
+  const awayTarget=allAway.find(x=>x.p?.id===viz.playerId)||allAway[(G.minute+5)%Math.max(1,allAway.length)]||{x:50,y:50};
+  const awayMate=allAway.find(x=>x.p?.id===viz.targetId)||allAway[(G.minute+9)%Math.max(1,allAway.length)]||awayTarget;
+  const active=viz.team==='away'?awayTarget:homeTarget;
+  const mate=viz.team==='away'?awayMate:homeMate;
+  const pulse=G.matchRunning?(Math.sin((G.minute+(viz.tick||0))*.9)+1)/2:.5;
+  const bx=clamp(active.x+(mate.x-active.x)*pulse,4,96);
+  const by=clamp(active.y+(mate.y-active.y)*pulse,4,96);
+  const dx=mate.x-active.x,dy=mate.y-active.y;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  const angle=Math.atan2(dy,dx)*180/Math.PI;
+  const trail=G.matchRunning?`<div class="mp-trail" style="left:${active.x}%;top:${active.y}%;width:${len}%;transform:rotate(${angle}deg);"></div><div class="mp-ball-live" style="left:${bx}%;top:${by}%;"></div>`:'';
+  pitch.innerHTML=home+away+trail;
   const mom=document.getElementById('mp-momentum');
   const m=G.matchPerf?.momentum?.length?G.matchPerf.momentum:[0,0,0,0,0,0];
   if(mom)mom.innerHTML=m.map(v=>`<div class="mp-bar ${v<0?'neg':''}" style="height:${Math.max(8,Math.abs(v)+18)}%;"></div>`).join('');
@@ -328,7 +405,7 @@ function endMatch(myStr,oppStr){
     else if(G.myG===G.oppG){income=Math.round(sl.income*.5);result='draw';notify('🤝 เสมอ +1 คะแนน');}
     else{income=Math.round(sl.income*.3);result='loss';notify('😔 แพ้ครั้งนี้ สู้ต่อ!','red');}
     // Bonus from scorer
-    getLineupPlayers().filter(p=>p.goals>0&&p.goalBonus>0).forEach(p=>income+=p.goalBonus*(p.goals));
+    getLineupPlayers().forEach(p=>income+=(p.goalBonus||0)*((G.matchPlayerStats?.[p.id]?.goals)||0));
     if(G.myG===0&&G.oppG===0){const gk=getLineupPlayers().find(p=>p.pos==='GK');if(gk){gk.cleanSheets=(gk.cleanSheets||0)+1;income+=gk.cleanSheetBonus||0;}}
     income+=G.sponsorIncome+G.merchandiseRevenue;
     G.money+=income;G.clubStats.played++;G.clubStats.totalRevenue+=income;
@@ -380,7 +457,13 @@ function endMatch(myStr,oppStr){
   G.matchHistory=G.matchHistory||[];
   G.matchHistory.push({season:G.season,week:G.week,competition:G.matchCompetitionLabel||'ลีก',opponent:G.oppName,myG:G.myG,oppG:G.oppG,result});
   G.matchHistory=G.matchHistory.slice(-120);
-  if(leagueMatch){G.week++;scheduleCupAfterLeagueWeek();}
+  if(leagueMatch){
+    G.week++;
+    const mePlayed=(G.leagueTable.find(t=>t.isMe)?.played)||0;
+    if(mePlayed>=38){
+      setTimeout(()=>endSeason(),900);
+    }else scheduleCupAfterLeagueWeek();
+  }
   else G.pendingCupMatch=null;
   generateOnlineTransferOffers();
   if(window.simulateOnlineManagers)simulateOnlineManagers();

@@ -333,3 +333,21 @@ function assignSlot(idx,pos){
   const best=free.sort((a,b)=>b.ca-a.ca)[0];
   G.slots[idx]=best.id;renderFormation();saveGame();notify('✅ '+best.name+' → '+pos);
 }
+function autoPickBestLineup(){
+  const slots=FORMATIONS[G.formation||'433']||FORMATIONS['433'];
+  const used=new Set();
+  G.slots={};
+  slots.forEach((sl,i)=>{
+    const candidates=G.squad.filter(p=>!used.has(p.id)&&isPosCompatible(p,sl.p));
+    const best=(candidates.length?candidates:G.squad.filter(p=>!used.has(p.id)&&!p.injured&&!(p.suspendedMatches>0)))
+      .sort((a,b)=>{
+        const aFit=(a.fitness||80)+(a.morale||70)*.25+(a.form||6)*2;
+        const bFit=(b.fitness||80)+(b.morale||70)*.25+(b.form||6)*2;
+        return ((b.ca||b.ovr)+bFit*.05)-((a.ca||a.ovr)+aFit*.05);
+      })[0];
+    if(best){G.slots[i]=best.id;used.add(best.id);}
+  });
+  renderFormation();
+  saveGame();
+  notify(`Auto Quick จัดตัวจริง ${getLineupPlayers().length}/11 คนแล้ว`,'green');
+}

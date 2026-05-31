@@ -1,4 +1,4 @@
-// Local offline account store for Superkick FM.
+// Local offline account store for FM KICK.
 // Passwords are stored as hashes only. Plain-text passwords must never be saved.
 (function(){
   const ACCOUNTS_KEY='skfm_player_accounts_v1';
@@ -85,15 +85,8 @@
     if(!account||account.passwordHash!==await hash(password))throw new Error('ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง');
     return startSession(account);
   };
-  const socialLogin=provider=>{
-    const accounts=load();
-    const username=`${provider}_manager_${String(Math.floor(1000+Math.random()*9000))}`;
-    const account={playerId:gameId(accounts),username,passwordHash:'',provider,createdAt:Date.now(),profile:{displayName:username}};
-    accounts.push(account);save(accounts);
-    return startSession(account);
-  };
   window.SuperkickAccounts={
-    register,login,socialLogin,getSession,saveProfile,getSaveKey,readGameSave,writeGameSave,
+    register,login,getSession,saveProfile,getSaveKey,readGameSave,writeGameSave,
     logout:()=>localStorage.removeItem(SESSION_KEY),
     listAccounts:()=>load().map(publicAccount),
     sessionMaxAgeMs:SESSION_MAX_AGE,
@@ -102,7 +95,7 @@
     playerId:'เลขไอดีผู้เล่น 9 หลัก',
     username:'ชื่อไอดีผู้เล่น',
     passwordHash:'รหัสผ่านแบบ hash เท่านั้น ไม่เก็บข้อความจริง',
-    provider:'local | google | apple',
+    provider:'local',
     profile:'ข้อมูลเกมล่าสุดของผู้สมัคร เช่น สโมสร ลีก ฤดูกาล และเวลาเล่นล่าสุด',
   };
 })();

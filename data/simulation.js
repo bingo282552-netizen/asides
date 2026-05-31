@@ -9,10 +9,10 @@ window.SUPERKICK_SIMULATION_CATALOG={
     {id:'balanced',label:'⚖️ Balanced',desc:'สมดุลทุกด้าน',effect:'ทุกอย่างปกติ',bonus:{}},
   ],
   OWNER_TYPES:[
-    {id:'billionaire',label:'💎 Billionaire',desc:'เจ้าสัวใจป้ำ งบเพิ่มทุกซีซั่น',budgetBonus:5000000,boardTolerance:3},
+    {id:'billionaire',label:'💎 Billionaire',desc:'เจ้าสัวใจป้ำ บอร์ดอดทนขึ้น',budgetBonus:0,boardTolerance:3},
     {id:'businessman',label:'💼 Businessman',desc:'นักธุรกิจ เน้นกำไร ต้องทำเงิน',budgetBonus:0,boardTolerance:2},
-    {id:'fan_owned',label:'❤️ Fan Owned',desc:'สโมสรของแฟนบอล เน้นผลงาน ไม่เน้นกำไร',budgetBonus:1000000,boardTolerance:2},
-    {id:'youth_investor',label:'🌱 Youth Investor',desc:'นักลงทุนเยาวชน ลงทุนปั้นดาวรุ่ง',budgetBonus:2000000,boardTolerance:3},
+    {id:'fan_owned',label:'❤️ Fan Owned',desc:'สโมสรของแฟนบอล เน้นผลงาน ไม่เน้นกำไร',budgetBonus:0,boardTolerance:2},
+    {id:'youth_investor',label:'🌱 Youth Investor',desc:'นักลงทุนเยาวชน เน้นปั้นดาวรุ่ง',budgetBonus:0,boardTolerance:3},
   ],
   WEATHER_LIST:[
     {id:'sunny',label:'☀️ แดดจัด',effect:'ไม่มีผล',attMod:0,defMod:0},

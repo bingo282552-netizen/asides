@@ -86,9 +86,7 @@ function endSeason(){
   G.legacySeasons.push({season:G.season-1,team:G.teamName,rank:myRank,revenue:G.clubStats.totalRevenue,won:G.clubStats.won});
   // Trophies
   if(myRank===1){G.trophies.league++;notify(`🏆 แชมป์ลีก Season ${G.season-1}!`,'gold');}
-  // Award owners
-  const owner=OWNER_TYPES.find(o=>o.id===G.ownerType)||OWNER_TYPES[1];
-  G.money+=owner.budgetBonus;
+  // Owners no longer inject money, so changing owner cannot be used as a cash exploit.
   // DNA bonus
   const dna=CLUB_DNA_OPTIONS.find(d=>d.id===G.clubDNA);
   if(dna?.bonus?.youthGrowth){G.youth.forEach(p=>p.ca=Math.min(p.ca+(dna.bonus.youthGrowth||0),99));}

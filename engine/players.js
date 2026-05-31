@@ -254,9 +254,13 @@ function calcMatchRatings(result){
   const ratings={};
   getLineupPlayerPool().forEach(p=>{
     if(!p.injured){
+      const ms=G.matchPlayerStats?.[p.id]||{};
       let r=base+rnd(-15,15)/10;
-      if(p.goals>0)r+=p.goals*1.2;
-      if(p.assists>0)r+=p.assists*0.8;
+      if(ms.goals>0)r+=ms.goals*1.2;
+      if(ms.assists>0)r+=ms.assists*0.8;
+      if(ms.keyPasses>0)r+=Math.min(ms.keyPasses*.12,.5);
+      if(ms.tackles>0)r+=Math.min(ms.tackles*.15,.6);
+      if(ms.shots>2&&!ms.goals)r-=.2;
       if(p.yellow)r-=0.3;
       if(p.red)r-=1.5;
       const pe=PERSONALITY_EFFECTS[p.personality]||{};

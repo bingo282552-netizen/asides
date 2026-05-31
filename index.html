@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Superkick FM v3.0</title>
+<title>FM KICK</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{--grass:#1a472a;--grass2:#2d6a4f;--gold:#f0b429;--gold2:#c47d0e;--dark:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--red:#da3633;--green:#3fb950;--blue:#58a6ff;--purple:#bc8cff;--orange:#f78166;--cyan:#39c5cf;}
@@ -187,6 +187,8 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 .mp-away .mp-ball{background:var(--red);}
 .mp-name{max-width:70px;text-align:center;font-size:.62rem;line-height:1.05;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .mp-rating{font-size:.58rem;padding:1px 4px;border-radius:8px;background:rgba(0,0,0,.55);color:var(--gold);font-weight:700;}
+.mp-ball-live{position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #111;box-shadow:0 2px 10px rgba(255,255,255,.45);z-index:4;transform:translate(-50%,-50%);transition:left .55s linear,top .55s linear;}
+.mp-trail{position:absolute;height:2px;background:rgba(255,255,255,.35);transform-origin:left center;z-index:1;}
 .mp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
 .mp-stat{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:6px;}
 .mp-heat{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;aspect-ratio:1.45;background:#0d1117;border:1px solid var(--border);padding:4px;border-radius:6px;}
@@ -286,7 +288,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
     <div class="land-logo-wrap">
       <span class="land-ball">⚽</span>
     </div>
-    <div class="land-title">SUPERKICK</div>
+    <div class="land-title">FM KICK</div>
     <div class="land-title" style="font-size:clamp(1.6rem,5vw,3rem);color:#fff;margin-top:-.3em;">FOOTBALL MANAGER</div>
     <div class="land-divider"></div>
     <div class="land-sub">Build · Buy · Conquer · Become Legend</div>
@@ -301,7 +303,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
       <button class="land-btn-main land-btn-sec" onclick="loadGame()" id="btn-load-save" style="display:none;">📂 CONTINUE</button>
     </div>
   </div>
-  <div class="land-version">v3.0 · 2025</div>
+  <div class="land-version">FM KICK · 2025</div>
 </div>
 
 <!-- ===== NEW GAME SCREEN ===== -->
@@ -351,7 +353,6 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
           <option>Atletico Madrid</option>
           <option>Juventus</option>
         </select>
-        <button class="btn bbl" style="width:135px;" onclick="autoQuickStart()">Auto Quick</button>
         </div>
       </div>
     </div>
@@ -380,7 +381,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <!-- ===== GAME UI ===== -->
 <div id="game-ui">
 <div id="hdr">
-  <div class="logo">⚽ Superkick FM <span style="font-size:.9rem;color:var(--muted);">v3</span></div>
+  <div class="logo">⚽ FM KICK</div>
   <div class="hud">
     <div class="fbtw gap"><span>💰</span><span class="hv" id="hm">50.0M</span></div>
     <div class="fbtw gap"><span>🏟️</span><span class="hv" id="hf">28K</span></div>
@@ -394,7 +395,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <div id="nav">
   <button class="nb active" onclick="goPage('home')">🏠 หน้าหลัก</button>
   <button class="nb" onclick="goPage('squad')">👥 ทีม</button>
-  <button class="nb" onclick="goPage('tactics')">📋 กลยุทธ์</button>
+  <button class="nb" onclick="goPage('tactics')">📋 วางแผนทีม</button>
   <button class="nb" onclick="goPage('match')">⚽ แข่งขัน</button>
   <button class="nb" onclick="goPage('transfer')">🔄 ซื้อขาย</button>
   <button class="nb" onclick="goPage('aiclubs')">🤖 AI สโมสร</button>
@@ -474,6 +475,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
         <option value="ovr">OVR</option><option value="ca">CA</option><option value="form">ฟอร์ม</option>
         <option value="fitness">ฟิต</option><option value="morale">ขวัญ</option>
       </select>
+      <button class="btn bg bsm" onclick="autoPickBestLineup()">Auto Quick</button>
     </div>
   </div>
   <div id="sq-grid" class="g4"></div>
@@ -484,7 +486,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
   <div class="g2">
     <div>
       <div class="card">
-        <div class="ct">📋 แผนการเล่น</div>
+        <div class="ct">📋 วางแผนทีม</div>
         <div class="mb"><label class="tm" style="font-size:.78rem;">รูปแบบ</label>
           <select id="t-form" onchange="updateFormation()">
             <option value="433">4-3-3</option><option value="442">4-4-2</option>
@@ -504,7 +506,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
           <input type="range" min="1" max="10" value="5" id="t-press" oninput="document.getElementById('tv-press').textContent=this.value;saveTacticControls();renderTeamStrength();"></div>
         <div class="mb"><label class="tm" style="font-size:.78rem;">ความกว้าง: <span id="tv-width">5</span></label>
           <input type="range" min="1" max="10" value="5" id="t-width" oninput="document.getElementById('tv-width').textContent=this.value;saveTacticControls();renderTeamStrength();"></div>
-        <div class="mb"><label class="tm" style="font-size:.78rem;">ความเร็วเกม: <span id="tv1">5</span></label>
+        <div class="mb"><label class="tm" style="font-size:.78rem;">จังหวะเกม: <span id="tv1">5</span></label>
           <input type="range" min="1" max="10" value="5" id="t-tempo" oninput="document.getElementById('tv1').textContent=this.value;saveTacticControls();renderTeamStrength();"></div>
         <div class="mb"><label class="tm" style="font-size:.78rem;">แนวรับ: <span id="tv2">5</span></label>
           <input type="range" min="1" max="10" value="5" id="t-defline" oninput="document.getElementById('tv2').textContent=this.value;saveTacticControls();renderTeamStrength();"></div>
@@ -528,7 +530,10 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
           <span id="t-fam" class="tg">-</span>
         </div>
         <div class="prbg mb"><div class="prb" id="t-fam-bar" style="width:0%;"></div></div>
-        <button class="btn bg" style="width:100%; margin-top:.4rem;" onclick="goPage('match')">▶ ไปแข่ง</button>
+        <div class="fb gap" style="margin-top:.4rem;">
+          <button class="btn bg" style="flex:1;" onclick="autoPickBestLineup()">Auto Quick</button>
+          <button class="btn bbl" style="flex:1;" onclick="goPage('match')">▶ ไปแข่ง</button>
+        </div>
       </div>
       <div class="card">
         <div class="ct">⚗️ เคมีทีม</div>
@@ -582,25 +587,9 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
     <div class="fb gap" style="flex-wrap:wrap; margin-bottom:.75rem;">
       <button class="btn bg" id="btn-sm" onclick="startMatch()">▶ เริ่มนัด</button>
       <button class="btn bgh" id="btn-pm" onclick="togglePause()" disabled>⏸ หยุด</button>
-      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
-        <span class="tm" style="font-size:.78rem;">ความเร็ว</span>
-        <select id="m-speed" style="width:auto;">
-          <option value="1200">🐢 ช้า</option><option value="600" selected>⚡ ปกติ</option>
-          <option value="220">🚀 เร็ว</option><option value="60">💨 สุดเร็ว</option>
-        </select>
-      </div>
+      <span class="tm" style="font-size:.78rem;margin-left:auto;">ความเร็ว: ปกติ</span>
     </div>
     <div id="m-events" style="max-height:280px;overflow-y:auto;"></div>
-  </div>
-  <div class="g2">
-    <div class="card">
-      <div class="ct">📊 สถิตินัดนี้</div>
-      <div id="m-live" class="tm">-</div>
-      <hr class="div">
-      <div class="ct" style="font-size:.88rem;">🎯 Match Rating นัดนี้</div>
-      <div id="m-ratings" style="font-size:.78rem;"></div>
-    </div>
-    <div class="card"><div class="ct">🏆 ตาราง</div><div id="mini-tbl"></div></div>
   </div>
   <div class="card">
     <div class="ct">📡 Match Performance Dashboard</div>
@@ -621,6 +610,16 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
       </div>
     </div>
   </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ct">📊 สถิตินัดนี้</div>
+      <div id="m-live" class="tm">-</div>
+      <hr class="div">
+      <div class="ct" style="font-size:.88rem;">🎯 Match Rating นัดนี้</div>
+      <div id="m-ratings" style="font-size:.78rem;"></div>
+    </div>
+    <div class="card"><div class="ct">🏆 ตาราง</div><div id="mini-tbl"></div></div>
+  </div>
 </div>
 
 <!-- TRANSFER -->
@@ -630,7 +629,6 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
     <button class="tb" onclick="swTab('tr','sell',this)">💰 ขาย</button>
     <button class="tb" onclick="swTab('tr','legend',this)">⭐ ตำนาน</button>
     <button class="tb" onclick="swTab('tr','contract',this)">📄 สัญญา</button>
-    <button class="tb" onclick="swTab('tr','loan',this)">🔗 ยืมตัว</button>
   </div>
   <div id="tr-market" class="tc active">
     <div class="card">
@@ -656,7 +654,6 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
   <div id="tr-sell" class="tc"><div class="card"><div class="ct">💸 ขายนักเตะ</div><div id="sell-list"></div></div></div>
   <div id="tr-legend" class="tc"><div class="card"><div class="ct">⭐ ตำนาน</div><div id="legend-list"></div></div></div>
   <div id="tr-contract" class="tc"><div class="card"><div class="ct">📄 สัญญา & โบนัส</div><div id="contract-list"></div></div></div>
-  <div id="tr-loan" class="tc"><div class="card"><div class="ct">🔗 ยืมตัว (ฟรี 3 เดือน)</div><div id="loan-list"></div></div></div>
 </div>
 
 <!-- AI CLUBS -->
@@ -868,7 +865,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
   <div class="card">
     <div class="ct">🏢 เจ้าของสโมสร</div>
     <div id="owner-display"></div>
-    <div class="tm" style="font-size:.78rem;margin-top:.5rem;">เจ้าของมีผลต่องบประมาณและเป้าหมาย</div>
+    <div class="tm" style="font-size:.78rem;margin-top:.5rem;">เจ้าของมีผลต่อความอดทนและเป้าหมายของบอร์ด</div>
   </div>
   <div class="card">
     <div class="ct">🌤️ สภาพอากาศวันแข่ง</div>

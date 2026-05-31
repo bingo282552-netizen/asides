@@ -5,7 +5,7 @@
     document.body.insertAdjacentHTML('beforeend',`
       <div id="auth-shell" class="auth-shell">
         <div class="auth-card">
-          <div class="auth-title">SUPERKICK ID</div>
+          <div class="auth-title">FM KICK ID</div>
           <div class="tm">เข้าสู่ระบบเพื่อเล่นต่อ ระบบจะจำการเข้าสู่ระบบไว้ 14 วัน</div>
           <div class="auth-tabs">
             <button class="tb active" id="auth-login-tab" onclick="switchAuthPane('login')">เข้าสู่ระบบ</button>
@@ -22,11 +22,6 @@
             <div class="mb"><label class="tm">ใส่รหัสผ่านซ้ำอีกครั้ง</label><input id="auth-register-confirm" type="password" autocomplete="new-password"></div>
             <button class="btn bg" style="width:100%;" onclick="submitRegistration()">สร้างไอดี</button>
           </div>
-          <div class="auth-social">
-            <button class="btn bgh" onclick="submitSocialLogin('google')">G Google</button>
-            <button class="btn bgh" onclick="submitSocialLogin('apple')"> Apple</button>
-          </div>
-          <div class="tm" style="font-size:.7rem;margin-top:7px;">Google และ Apple เป็นโหมดจำลองสำหรับเกม local offline</div>
           <div id="auth-error" class="auth-error"></div>
         </div>
       </div>`);
@@ -52,7 +47,6 @@
     try{completeAuth(await SuperkickAccounts.register(byId('auth-register-name').value,byId('auth-register-pass').value,byId('auth-register-confirm').value));}
     catch(error){authError(error);}
   };
-  window.submitSocialLogin=provider=>completeAuth(SuperkickAccounts.socialLogin(provider));
   window.logoutSuperkick=()=>{
     SuperkickAccounts.logout();
     closeSettings();
