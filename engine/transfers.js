@@ -264,13 +264,6 @@ function renewContract(id){
   G.money-=cost;p.contract+=3;p.wage=Math.round(p.wage*(1.1+loyaltyBonus));p.morale=Math.min(100,p.morale+10);
   updateHUD();notify(`📄 ต่อสัญญา ${p.name} 3 ปี (+${Math.round(loyaltyBonus*100)}%)`,'green');renderContracts();
 }
-function renderLoans(){
-  G.loanPlayers=[];
-}
-function loanPlayer(id){
-  notify('ระบบยืมตัวถูกปิดแล้ว','red');
-}
-
 // ===== AI CLUBS =====
 function runAITransferWindow(){
   const log=[];

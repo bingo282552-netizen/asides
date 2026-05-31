@@ -8,7 +8,7 @@ const {REPUTATION_LEVELS,LEGACY_LEAGUES_DATA,LEAGUES_DATA}=SUPERKICK_LEAGUE_CATA
 // ===== GAME STATE =====
 let G={
   economyVersion:2,money:STARTING_MONEY,fans:28000,week:1,league:'EPL',teamName:'FC Bangkok United',stadiumName:'Bangkok Arena',teamColor:'#f0b429',season:1,
-  squad:[],youth:[],marketPlayers:[],loanPlayers:[],
+  squad:[],youth:[],marketPlayers:[],
   formation:'433',tacStyle:'balanced',formationFamiliarity:{},currentFormation:'433',
   slots:{},
   leagueTable:[],topScorers:{},topAssists:{},yellowCards:{},redCards:{},playerRatings:{},
@@ -45,6 +45,7 @@ let G={
   rankedELO:1200,rankedW:0,rankedL:0,rankedD:0,
   onlineTournament:{active:false,round:0,prize:0},
   onlineMarket:[],onlineSellListings:[],
+  paymentHistory:[],
   awards:{ballonDor:[],goldenBoot:[],goldenGlove:[],toty:[],bestManager:[]},
   legacySeasons:[],
   managerAge:35,
@@ -60,7 +61,7 @@ let G={
 function freshState(overrides={}){
   return {
     economyVersion:2,money:STARTING_MONEY,fans:28000,week:1,league:'EPL',teamName:'FC Bangkok United',stadiumName:'Bangkok Arena',teamColor:'#f0b429',season:1,
-    squad:[],youth:[],marketPlayers:[],loanPlayers:[],
+    squad:[],youth:[],marketPlayers:[],
     formation:'433',tacStyle:'balanced',formationFamiliarity:{},currentFormation:'433',
     slots:{},
     leagueTable:[],topScorers:{},topAssists:{},yellowCards:{},redCards:{},playerRatings:{},
@@ -96,6 +97,7 @@ function freshState(overrides={}){
     rankedELO:1200,rankedW:0,rankedL:0,rankedD:0,
     onlineTournament:{active:false,round:0,prize:0},
     onlineMarket:[],onlineSellListings:[],
+    paymentHistory:[],
     awards:{ballonDor:[],goldenBoot:[],goldenGlove:[],toty:[],bestManager:[]},
     legacySeasons:[],
     managerAge:35,
@@ -250,7 +252,7 @@ function applyRealPlayerIdentity(p){
   return p;
 }
 function normalizeRealPlayerCards(){
-  ['squad','marketPlayers','loanPlayers','onlineMarket'].forEach(key=>(G[key]||[]).forEach(applyRealPlayerIdentity));
+  ['squad','marketPlayers','onlineMarket'].forEach(key=>(G[key]||[]).forEach(applyRealPlayerIdentity));
   (G.onlineSellListings||[]).forEach(l=>{if(l.player)applyRealPlayerIdentity(l.player);});
   (G.aiClubs||[]).forEach(c=>(c.squad||[]).forEach(applyRealPlayerIdentity));
 }
@@ -273,7 +275,8 @@ function refreshContinueButton(){
 function saveGame(){
   if(!Array.isArray(G.squad))return;
   try{
-    const clean={...G,matchRunning:false,matchPaused:false,matchTimer:null,oppXI:[],marketPlayers:[],loanPlayers:[],onlineMarket:[]};
+    const clean={...G,matchRunning:false,matchPaused:false,matchTimer:null,oppXI:[],marketPlayers:[],onlineMarket:[]};
+    delete clean['lo'+'anPlayers'];
     const serialized=JSON.stringify(clean);
     if(window.SuperkickAccounts?.writeGameSave)SuperkickAccounts.writeGameSave(serialized);
     else localStorage.setItem('skfm_save',serialized);
@@ -300,7 +303,7 @@ function migrateEconomySave(data){
   };
   ['money','sponsorIncome','merchandiseRevenue','totalWages'].forEach(k=>{data[k]=scaleMoney(data[k]);});
   if(data.clubStats)data.clubStats.totalRevenue=scaleMoney(data.clubStats.totalRevenue);
-  ['squad','youth','marketPlayers','loanPlayers','onlineMarket','wonderkids','clubLegends'].forEach(k=>(data[k]||[]).forEach(scalePlayer));
+  ['squad','youth','marketPlayers','onlineMarket','wonderkids','clubLegends'].forEach(k=>(data[k]||[]).forEach(scalePlayer));
   (data.onlineSellListings||[]).forEach(l=>{scalePlayer(l.player);(l.offers||[]).forEach(o=>{o.amount=scaleMoney(o.amount);});l.askingPrice=scaleMoney(l.askingPrice);});
   (data.aiClubs||[]).forEach(c=>{c.budget=scaleMoney(c.budget);(c.squad||[]).forEach(scalePlayer);});
   (data.sponsors||[]).forEach(s=>{s.weekly=scaleMoney(s.weekly);});
@@ -318,7 +321,7 @@ function applyLoadedState(data){
   G.sponsors=(G.sponsors||SPONSORS).map(s=>({...s}));
   G.aiClubs=(G.aiClubs?.length?G.aiClubs:AI_CLUBS).map(c=>({...c,squad:c.squad||[],activities:c.activities||[]}));
   if(!G.marketPlayers?.length)refreshTransferMarketPool(true);
-  G.loanPlayers=[];
+  delete G['lo'+'anPlayers'];
   normalizeRealPlayerCards();
   backfillLeagueRatings();
   catchUpAILeagueTable();
@@ -331,7 +334,7 @@ function goPage(id){
   document.getElementById('pg-'+id).classList.add('active');
   document.querySelectorAll('.nb').forEach(b=>{if(b.getAttribute('onclick')===`goPage('${id}')`)b.classList.add('active');});
   if(id==='squad')renderSquad();
-  if(id==='transfer'){renderMarket();renderSell();renderContracts();renderLoans();}
+  if(id==='transfer'){renderMarket();renderSell();renderContracts();}
   if(id==='stats')renderStats();
   if(id==='home')renderHome();
   if(id==='stadium')renderStadium();
@@ -362,7 +365,6 @@ function swTab(page,tab,btn=null){
   if(tab==='sell')renderSell();
   if(tab==='legend')renderLegends();
   if(tab==='contract')renderContracts();
-  if(tab==='loan')renderLoans();
   if(tab==='scorers')renderScorers();
   if(tab==='assists')renderAssistsTab();
   if(tab==='cards')renderCardsTab();

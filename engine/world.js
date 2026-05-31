@@ -9,7 +9,6 @@ function initGame(){
   G.matchRunning=false;G.matchPaused=false;G.minute=0;G.myG=0;G.oppG=0;G.matchShots=[0,0];G.matchPoss=50;
   G.topScorers={};G.topAssists={};G.yellowCards={};G.redCards={};G.matchRatings={};
   refreshTransferMarketPool(true);
-  G.loanPlayers=[];
   G.aiClubs=buildAIClubsForLeague(G.league);
   G.aiClubs.forEach(c=>{c.squad=getClubSquadFromWorld(G.league,c.name,clamp(c.rep+rnd(-4,4),45,94));});
   initLeagueTable();

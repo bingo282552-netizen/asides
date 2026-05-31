@@ -84,7 +84,6 @@ function genPlayer(opts={}){
     injured:false,injuryDays:0,injuryMatches:0,injuryType:'',suspendedMatches:0,
     rating:6.5,seasonRating:6.5,matchRatings:[],
     growthRate:0,isLegend:false,
-    onLoan:false,loanClub:'',loanMonths:0,
     peakAge:calcPeakAge(pos),
     isDeclined:false,
   };

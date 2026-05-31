@@ -106,9 +106,8 @@ function renderSquad(){
     const pe=PERSONALITY_EFFECTS[p.personality]||{};
     const injBadge=p.injured?`<span class="inj-tag">${p.injuryType||'บาดเจ็บ'}</span>`:(p.suspendedMatches>0?`<span class="inj-tag">แบน ${p.suspendedMatches} นัด</span>`:'');
     const potColor=p.potential>=88?'var(--purple)':p.potential>=80?'var(--gold)':'var(--green)';
-    const loanBadge=p.onLoan?'<span class="badge bg-blue" style="font-size:.6rem;">ยืม</span>':'';
     return `<div class="pc ${p.injured?'injured':''}" onclick="showPlayer('${p.id}')">
-      <div class="pstatus">${injBadge}${loanBadge}</div>
+      <div class="pstatus">${injBadge}</div>
       <div class="povr" style="color:${potColor}">P${p.potential}</div>
       ${playerFace(p)}
       <div class="pn">${playerCardName(p)}</div>
