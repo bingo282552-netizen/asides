@@ -3,9 +3,7 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>FM KICK</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
 :root{--grass:#1a472a;--grass2:#2d6a4f;--gold:#f0b429;--gold2:#c47d0e;--dark:#0d1117;--card:#161b22;--border:#30363d;--text:#e6edf3;--muted:#8b949e;--red:#da3633;--green:#3fb950;--blue:#58a6ff;--purple:#bc8cff;--orange:#f78166;--cyan:#39c5cf;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -497,6 +495,10 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 
 <!-- TACTICS -->
 <div id="pg-tactics" class="pg">
+  <div class="mobile-tactics-actions">
+    <button class="btn bg" onclick="autoPickBestLineup()">Auto Quick จัดตัวจริง</button>
+    <button class="btn bbl" onclick="goPage('match')">▶ ไปแข่ง</button>
+  </div>
   <div class="g2">
     <div>
       <div class="card">
@@ -835,7 +837,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <div id="pg-awards" class="pg">
   <div class="card" style="background:linear-gradient(135deg,#1a1200,#0d1117);border-color:var(--gold);">
     <div class="ct" style="font-size:1.3rem;">🏅 รางวัลประจำฤดูกาล</div>
-    <div class="tm" style="font-size:.8rem;">รางวัลจะมอบเมื่อจบฤดูกาล (38 นัด)</div>
+    <div class="tm" style="font-size:.8rem;">รางวัลจะมอบเมื่อจบฤดูกาลตามจำนวนทีมในลีก</div>
   </div>
   <div class="g2">
     <div class="card">
@@ -918,7 +920,30 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
   <div class="card" style="background:linear-gradient(135deg,#001a33,#0d1117);border-color:var(--blue);">
     <div class="ct" style="color:var(--blue);">🌐 ระบบออนไลน์</div>
     <div class="tm" id="online-service-status">กำลังตรวจสอบการเชื่อมต่อ...</div>
-    <button class="btn bbl bsm" style="margin-top:.5rem;" onclick="connectRealOnline()">เชื่อมต่อ Online Backend</button>
+  </div>
+  <div class="card" style="border-color:var(--cyan);">
+    <div class="ct" style="color:var(--cyan);">🎮 ห้องเล่นกับเพื่อน</div>
+    <div id="friend-room-browser">
+    <div class="g2">
+      <div>
+        <div class="fbtw mb"><span class="tm">เวลาในเกม</span><select id="friend-room-duration" style="max-width:120px;"><option value="2">2 นาที</option><option value="3" selected>3 นาที</option><option value="4">4 นาที</option><option value="5">5 นาที</option></select></div>
+        <div class="fbtw mb"><span class="tm">สภาพอากาศ</span><select id="friend-room-weather" style="max-width:140px;"><option value="sunny">แดดออก</option><option value="rain">ฝนตก</option><option value="cloudy">ครึ้ม</option><option value="windy">ลมแรง</option><option value="storm">พายุ</option></select></div>
+        <div class="fbtw mb"><span class="tm">ต่อเวลาพิเศษ</span><input id="friend-room-extra" type="checkbox"></div>
+        <div class="fbtw mb"><span class="tm">ยิงจุดโทษถ้าเสมอ</span><input id="friend-room-penalties" type="checkbox" checked></div>
+        <button class="btn bg" onclick="createFriendRoom()">สร้างห้อง</button>
+      </div>
+      <div>
+        <div class="mb"><label class="tm">รหัสห้อง</label><input id="friend-room-code" type="text" maxlength="8" placeholder="เช่น A7K2Q"></div>
+        <div class="fb gap mbm">
+          <button class="btn bbl" onclick="joinFriendRoom()">เข้าห้อง</button>
+          <button class="btn bgh" onclick="searchFriendRooms()">ค้นหาห้อง</button>
+        </div>
+        <div id="friend-room-search" class="tm"></div>
+      </div>
+    </div>
+    <hr class="div">
+    </div>
+    <div id="friend-room-panel"></div>
   </div>
   <div class="g2">
     <div class="card">
@@ -1029,7 +1054,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <script src="data/club-catalog.js"></script>
 <script src="data/simulation.js"></script>
 <script src="data/game-config.js"></script>
-<script src="data/services.js"></script>
+<script src="data/services.js?v=20260601-1"></script>
 <script src="data/player-accounts.js"></script>
 <script src="engine/core.js"></script>
 <script src="engine/players.js"></script>
@@ -1039,7 +1064,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <script src="engine/transfers.js"></script>
 <script src="engine/club-management.js"></script>
 <script src="engine/world-systems.js"></script>
-<script src="engine/online.js"></script>
+<script src="engine/online.js?v=20260601-2"></script>
 <script src="engine/shop.js"></script>
 <script src="engine/legacy.js"></script>
 <script src="engine/landing.js"></script>

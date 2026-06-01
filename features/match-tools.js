@@ -18,10 +18,11 @@
   }
   function ensureSeasonFixtures(){
     ensureState();
-    if(G.seasonFixtures.filter(f=>f.competition==='league').length>=38&&G.seasonFixtures[0]?.season===G.season)return;
+    const seasonLength=typeof leagueSeasonLength==='function'?leagueSeasonLength():38;
+    if(G.seasonFixtures.filter(f=>f.competition==='league').length>=seasonLength&&G.seasonFixtures[0]?.season===G.season)return;
     const opponents=getLeagueTeams(G.league).filter(name=>name!==G.teamName);
     const domesticWeeks=[6,12,20,28,35],continentalWeeks=[8,14,22,30,36];
-    G.seasonFixtures=Array.from({length:38},(_,index)=>({
+    G.seasonFixtures=Array.from({length:seasonLength},(_,index)=>({
       week:index+1,season:G.season,competition:'league',label:'ลีก',opponent:opponents[index%opponents.length],home:index%2===0,
     })).flatMap(f=>{
       const rows=[];

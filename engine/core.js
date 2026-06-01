@@ -45,7 +45,7 @@ let G={
   rankedELO:1200,rankedW:0,rankedL:0,rankedD:0,
   onlineTournament:{active:false,round:0,prize:0},
   onlineMarket:[],onlineSellListings:[],
-  paymentHistory:[],
+  paymentHistory:[],usedSlipHashes:{},usedSlipVisuals:[],
   awards:{ballonDor:[],goldenBoot:[],goldenGlove:[],toty:[],bestManager:[]},
   legacySeasons:[],
   managerAge:35,
@@ -97,7 +97,7 @@ function freshState(overrides={}){
     rankedELO:1200,rankedW:0,rankedL:0,rankedD:0,
     onlineTournament:{active:false,round:0,prize:0},
     onlineMarket:[],onlineSellListings:[],
-    paymentHistory:[],
+    paymentHistory:[],usedSlipHashes:{},usedSlipVisuals:[],
     awards:{ballonDor:[],goldenBoot:[],goldenGlove:[],toty:[],bestManager:[]},
     legacySeasons:[],
     managerAge:35,
@@ -286,6 +286,8 @@ function saveGame(){
       league:G.league||'',
       season:G.season||1,
       week:G.week||1,
+      money:G.money||0,
+      teamStrength:typeof calcTeamStrength==='function'?calcTeamStrength().total:0,
       lastPlayedAt:Date.now(),
     });
     refreshContinueButton();

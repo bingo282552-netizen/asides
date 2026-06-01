@@ -5,7 +5,9 @@ function renderShop(){
   const status=document.getElementById('payment-service-status');
   if(status)status.innerHTML=payment.enabled&&payment.checkoutEndpoint
     ?'<span class="tgr">พร้อมเชื่อมต่อ Checkout จริงผ่าน backend</span>'
-    :'<span class="tg">สแกน QR ธนาคาร แล้วแนบสลิปเพื่อให้ AI ตรวจสอบก่อนเติม Coins</span>';
+    :payment.allowClientSlipTopup
+      ?'<span class="tg">โหมดทดสอบ: แนบสลิปและเติม Coins ใน browser</span>'
+      :'<span class="tr">ยังไม่เปิดเติม Coins จริง ต้องตั้ง Checkout backend/webhook ก่อน</span>';
   // Topup
   document.getElementById('topup-grid').innerHTML=TOPUP_PACKAGES.map(p=>`
     <div class="card" style="text-align:center;cursor:pointer;" onclick="startRealTopup(${p.coins},'${p.price}')">
@@ -53,7 +55,9 @@ function renderShop(){
 async function startRealTopup(coins,price){
   const payment=window.SUPERKICK_SERVICE_CONFIG?.payments||{};
   if(!payment.enabled||!payment.checkoutEndpoint){
-    openSlipPaymentCheckout(coins,price);return;
+    if(payment.allowClientSlipTopup)openSlipPaymentCheckout(coins,price);
+    else notify('ยังไม่ได้เปิด Checkout backend สำหรับเติม Coins จริง','red');
+    return;
   }
   try{
     const account=window.SuperkickAccounts?.getSession?.();
@@ -172,6 +176,44 @@ function loadSlipImage(file){
     img.src=url;
   });
 }
+async function slipFileHash(file){
+  const buf=await file.arrayBuffer();
+  if(window.crypto?.subtle){
+    const digest=await crypto.subtle.digest('SHA-256',buf);
+    return [...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('');
+  }
+  let h=2166136261;
+  const bytes=new Uint8Array(buf);
+  for(let i=0;i<bytes.length;i++)h=Math.imul(h^bytes[i],16777619);
+  return 'fallback-'+(h>>>0).toString(16);
+}
+function slipVisualSignature(img){
+  const sw=16,sh=24;
+  const canvas=document.createElement('canvas');
+  canvas.width=sw;canvas.height=sh;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0,sw,sh);
+  const data=ctx.getImageData(0,0,sw,sh).data;
+  const lum=[];
+  for(let i=0;i<data.length;i+=4)lum.push((data[i]+data[i+1]+data[i+2])/3);
+  const mean=lum.reduce((a,b)=>a+b,0)/lum.length;
+  return lum.map(v=>v>mean?'1':'0').join('');
+}
+function hammingDistance(a,b){
+  if(!a||!b||a.length!==b.length)return Infinity;
+  let d=0;
+  for(let i=0;i<a.length;i++)if(a[i]!==b[i])d++;
+  return d;
+}
+function findDuplicateSlip(fileHash,visualSig){
+  const usedHashes=G.usedSlipHashes||{};
+  if(fileHash&&usedHashes[fileHash])return {type:'file',record:usedHashes[fileHash]};
+  const oldHash=(G.paymentHistory||[]).find(h=>h.slipHash&&h.slipHash===fileHash);
+  if(oldHash)return {type:'file',record:oldHash};
+  const visuals=[...(G.usedSlipVisuals||[]),...(G.paymentHistory||[]).filter(h=>h.slipVisualSig).map(h=>({sig:h.slipVisualSig,createdAt:h.createdAt}))];
+  const duplicate=visuals.find(v=>hammingDistance(v.sig,visualSig)<=6);
+  return duplicate?{type:'image',record:duplicate}:null;
+}
 async function analyzeSlipImage(file,amount){
   const img=await loadSlipImage(file);
   const w=img.naturalWidth||img.width;
@@ -211,7 +253,7 @@ async function analyzeSlipImage(file,amount){
   if(file.size>=45000){score+=10;reasons.push('ขนาดไฟล์เหมาะสม');}
   if(amount>0)score+=10;
   const ok=score>=72;
-  return {ok,score:Math.min(100,Math.round(score)),reasons,width:w,height:h,darkRatio,lightRatio,edgeScore};
+  return {ok,score:Math.min(100,Math.round(score)),reasons,width:w,height:h,darkRatio,lightRatio,edgeScore,visualSig:slipVisualSignature(img)};
 }
 function renderSlipAiResult(result){
   const el=document.getElementById('slip-ai-preview');
@@ -220,13 +262,20 @@ function renderSlipAiResult(result){
   el.innerHTML=`<span class="${color}">AI Score ${result.score}/100</span> · ${result.reasons.slice(0,3).join(' · ')}`;
 }
 async function completeSlipPayment(selectedCoins,selectedPrice){
+  const payment=window.SUPERKICK_SERVICE_CONFIG?.payments||{};
+  if(!payment.allowClientSlipTopup){
+    paymentFail('ปิดการเติม Coins จาก browser แล้ว ต้องยืนยันผ่าน backend/webhook เท่านั้น');
+    return;
+  }
   const checked=validateSlipPayment();
   if(!checked)return;
   const {amount,file,sender,pack}=checked;
   const aiEl=document.getElementById('slip-ai-preview');
   if(aiEl)aiEl.textContent='AI กำลังตรวจรูปสลิป...';
   let aiResult;
+  let fileHash='';
   try{
+    fileHash=await slipFileHash(file);
     aiResult=await analyzeSlipImage(file,amount);
   }catch(error){
     paymentFail(error.message||'AI อ่านรูปสลิปไม่ได้');return;
@@ -235,12 +284,21 @@ async function completeSlipPayment(selectedCoins,selectedPrice){
   if(!aiResult.ok){
     paymentFail('AI ไม่มั่นใจว่าเป็นสลิปจริง กรุณาแนบรูปสลิปที่ชัดเจนจากแอปธนาคาร');return;
   }
+  const duplicate=findDuplicateSlip(fileHash,aiResult.visualSig);
+  if(duplicate){
+    paymentFail('สลิปนี้เคยใช้เติม Coins แล้ว กรุณาใช้สลิปใหม่');return;
+  }
   G.coins=(G.coins||0)+pack.coins;
   G.paymentHistory=G.paymentHistory||[];
+  G.usedSlipHashes=G.usedSlipHashes||{};
+  G.usedSlipHashes[fileHash]={amount,coins:pack.coins,createdAt:Date.now(),slipName:file.name};
+  G.usedSlipVisuals=G.usedSlipVisuals||[];
+  G.usedSlipVisuals.unshift({sig:aiResult.visualSig,amount,coins:pack.coins,createdAt:Date.now()});
+  G.usedSlipVisuals=G.usedSlipVisuals.slice(0,200);
   G.paymentHistory.unshift({
     id:uid(),coins:pack.coins,price:pack.price,requestedCoins:selectedCoins,requestedPrice:selectedPrice,
     amount,method:'qr_slip',paymentLabel:`QR Slip · ${amount}฿`,recipient:'นายบดินทร ดีบุกคำ',
-    sender,slipName:file.name,slipSize:file.size,aiScore:aiResult.score,
+    sender,slipName:file.name,slipSize:file.size,slipHash:fileHash,slipVisualSig:aiResult.visualSig,aiScore:aiResult.score,
     slipWidth:aiResult.width,slipHeight:aiResult.height,createdAt:Date.now(),status:'ai_slip_approved'
   });
   G.paymentHistory=G.paymentHistory.slice(0,20);

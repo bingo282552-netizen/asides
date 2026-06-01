@@ -267,7 +267,7 @@ function startMatch(){
       updateLiveStats(myStr,oppOVR);
     }
     if(G.minute>=G.matchMaxMinute){
-      if(G.minute===90&&G.myG===G.oppG){
+      if(G.minute===90&&G.myG===G.oppG&&G.matchCompetition!=='league'){
         G.matchMaxMinute=120;G.extraTimePlayed=true;
         document.getElementById('m-half').textContent='ต่อเวลา';
         addEv('⏱ เสมอในเวลา 90 นาที เล่นต่อเวลาถึง 120 นาที','save');
@@ -493,7 +493,7 @@ function endMatch(myStr,oppStr){
   if(leagueMatch){
     G.week++;
     const mePlayed=(G.leagueTable.find(t=>t.isMe)?.played)||0;
-    if(mePlayed>=38){
+    if(mePlayed>=leagueSeasonLength()){
       setTimeout(()=>endSeason(),900);
     }else scheduleCupAfterLeagueWeek();
   }
@@ -523,7 +523,7 @@ function renderMiniTable(){
 function checkFFP(){
   if(G.week%4!==0)return;
   const annualWages=G.squad.reduce((s,p)=>s+p.wage,0)*12;
-  const annualRevenue=SLVLS[G.stadiumLevel-1].income*38+G.sponsorIncome*52+G.merchandiseRevenue*12+Math.max(G.money,0)*0.15;
+  const annualRevenue=SLVLS[G.stadiumLevel-1].income*leagueSeasonLength()+G.sponsorIncome*52+G.merchandiseRevenue*12+Math.max(G.money,0)*0.15;
   if(annualWages>annualRevenue*2.2){
     G.ffpWarnings++;
     if(G.ffpWarnings>=3){const fine=Math.round(annualWages*0.02);G.money-=fine;notify(`🚨 FFP ปรับ ${fmt(fine)}! ลดค่าเหนื่อย!`,'red');}

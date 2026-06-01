@@ -81,7 +81,7 @@ function renderBoardGoals(){
   if(document.getElementById('board-goal-disp'))document.getElementById('board-goal-disp').textContent='เป้าหมาย: '+goals[G.boardGoal];
   // End season button
   const endBtn=document.getElementById('end-season-btn');
-  if(endBtn){const me2=G.leagueTable.find(t=>t.isMe)||{};endBtn.style.display=me2.played>=38?'block':'none';}
+  if(endBtn){const me2=G.leagueTable.find(t=>t.isMe)||{};endBtn.style.display=me2.played>=leagueSeasonLength()?'block':'none';}
 }
 
 // ===== SQUAD =====
@@ -244,13 +244,14 @@ function renderLineupSquad(){
   const used=new Set(Object.values(G.slots||{}));
   const counter=document.getElementById('lineup-count');
   if(counter)counter.textContent=getLineupPlayers().length;
-  panel.innerHTML=[...G.squad].sort((a,b)=>(b.ca||b.ovr)-(a.ca||a.ovr)).map(p=>{
+  panel.innerHTML='<div class="lineup-touch-hint">แตะนักเตะ แล้วแตะตำแหน่งในสนามเพื่อจัดตัวจริง</div>'+[...G.squad].sort((a,b)=>(b.ca||b.ovr)-(a.ca||a.ovr)).map(p=>{
     const usedCls=used.has(p.id)?' used':'';
+    const selectedCls=pendingLineupPlayerId===p.id?' selected':'';
     const unavailable=p.injured||p.suspendedMatches>0;
     const injCls=unavailable?' injured':'';
     const face=p.photo?`<img src="${p.photo}" alt="">`:p.face;
     const status=p.injured?`บาดเจ็บ พัก ${p.injuryMatches||Math.ceil((p.injuryDays||0)/7)} นัด`:p.suspendedMatches>0?`ติดโทษแบน ${p.suspendedMatches} นัด`:`Fit ${p.fitness||0}% · Morale ${p.morale||0}`;
-    return `<div class="lineup-player${usedCls}${injCls}" draggable="${unavailable?'false':'true'}" ondragstart="dragLineupPlayer(event,'${p.id}')" onclick="selectLineupPlayer('${p.id}')">
+    return `<div class="lineup-player${usedCls}${injCls}${selectedCls}" draggable="${unavailable?'false':'true'}" ondragstart="dragLineupPlayer(event,'${p.id}')" onclick="selectLineupPlayer('${p.id}')">
       <div class="lineup-avatar">${face}</div>
       <div><div class="lineup-name">${p.name}</div><div class="lineup-meta">${p.pos} · ${status}</div></div>
       <div class="lineup-ovr">${p.ca||p.ovr}</div>
@@ -266,6 +267,7 @@ function selectLineupPlayer(id){
   const p=G.squad.find(x=>x.id===id);
   if(!p||p.injured||p.suspendedMatches>0)return;
   pendingLineupPlayerId=id;
+  renderLineupSquad();
   notify('เลือก '+p.name+' แล้ว คลิกตำแหน่งในสนามเพื่อใส่ตัว','blue');
 }
 function lineupDragOver(ev){

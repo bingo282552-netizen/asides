@@ -86,6 +86,10 @@ function getLeagueTeams(id=G.league){
   const teams=[G.teamName,...pool.filter(n=>n!==G.teamName)];
   return [...new Set(teams)].slice(0,Math.max(12,Math.min(20,teams.length)));
 }
+function leagueSeasonLength(id=G.league){
+  const teams=getLeagueTeams(id).length;
+  return Math.min(38,Math.max(teams-1,(teams-1)*2));
+}
 function buildAIClubsForLeague(id=G.league){
   const league=getLeagueInfo(id);
   return getLeagueTeams(id).filter(n=>n!==G.teamName).map((name,i)=>{

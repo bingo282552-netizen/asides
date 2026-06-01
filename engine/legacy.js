@@ -113,7 +113,7 @@ function endSeason(){
 // Add end season button to home
 function addEndSeasonBtn(){
   const me=G.leagueTable.find(t=>t.isMe)||{};
-  if(me.played>=38){
+  if(me.played>=leagueSeasonLength()){
     return `<button class="btn bg" style="width:100%;margin-top:.5rem;" onclick="endSeason()">📅 จบฤดูกาล Season ${G.season}</button>`;
   }
   return '';
