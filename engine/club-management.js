@@ -58,28 +58,56 @@ function renderPackReveal(){
   if(nextBtn){nextBtn.disabled=packAnimating||done;nextBtn.textContent=done?'เปิดครบแล้ว':'เปิดใบถัดไป';}
   if(addBtn){addBtn.disabled=!done;}
 }
-function playPackSuspense(tierId){
+function packWalkoutLevel(p){
+  const tier=cardTierById(p.cardTier)||CARD_TIERS[0];
+  if(tier.id==='icon'||p.cardVersion==='Legend'||p.acquisition==='legend_pack')return 'mega';
+  if(['gold','elite'].includes(tier.id)||(p.ovr||0)>=85)return 'premium';
+  return 'standard';
+}
+function playPackSuspense(tierId,level='standard'){
   try{
     packAudioCtx=packAudioCtx||new (window.AudioContext||window.webkitAudioContext)();
     const ctx=packAudioCtx,now=ctx.currentTime;
     const tier=cardTierById(tierId)||CARD_TIERS[0];
-    const gain=ctx.createGain();gain.connect(ctx.destination);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.09,now+.08);gain.gain.exponentialRampToValueAtTime(.0001,now+1.35);
-    [0,.18,.36,.54].forEach((d,idx)=>{
-      const osc=ctx.createOscillator();osc.type=idx%2?'triangle':'sawtooth';osc.frequency.setValueAtTime(150+idx*55,now+d);osc.frequency.exponentialRampToValueAtTime(420+idx*95,now+d+.22);osc.connect(gain);osc.start(now+d);osc.stop(now+d+.24);
+    const dramatic=level!=='standard';
+    const gain=ctx.createGain();gain.connect(ctx.destination);gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(dramatic ? .115 : .09,now+.08);gain.gain.exponentialRampToValueAtTime(.0001,now+(dramatic?4.25:1.55));
+    (dramatic?[0,.28,.56,.84,1.12]:[0,.18,.36,.54]).forEach((d,idx)=>{
+      const osc=ctx.createOscillator();osc.type=idx%2?'triangle':'sawtooth';osc.frequency.setValueAtTime((dramatic?92:150)+idx*55,now+d);osc.frequency.exponentialRampToValueAtTime(420+idx*95,now+d+.24);osc.connect(gain);osc.start(now+d);osc.stop(now+d+.27);
     });
+    if(dramatic){
+      const boom=ctx.createOscillator();const boomGain=ctx.createGain();
+      boom.type='sine';boom.frequency.setValueAtTime(94,now+1.15);boom.frequency.exponentialRampToValueAtTime(38,now+1.75);
+      boomGain.gain.setValueAtTime(.001,now+1.14);boomGain.gain.exponentialRampToValueAtTime(.22,now+1.18);boomGain.gain.exponentialRampToValueAtTime(.001,now+1.82);
+      boom.connect(boomGain);boomGain.connect(ctx.destination);boom.start(now+1.14);boom.stop(now+1.85);
+    }
     if(['gold','elite','icon'].includes(tier.id)){
-      const bell=ctx.createOscillator();const bg=ctx.createGain();bell.type='sine';bell.frequency.setValueAtTime(tier.id==='icon'?880:660,now+.9);bg.gain.setValueAtTime(.001,now+.9);bg.gain.exponentialRampToValueAtTime(.12,now+.95);bg.gain.exponentialRampToValueAtTime(.001,now+1.45);bell.connect(bg);bg.connect(ctx.destination);bell.start(now+.9);bell.stop(now+1.5);
+      const bell=ctx.createOscillator();const bg=ctx.createGain();const revealAt=dramatic?2.82:.9;
+      bell.type='sine';bell.frequency.setValueAtTime(tier.id==='icon'?1040:720,now+revealAt);bg.gain.setValueAtTime(.001,now+revealAt);bg.gain.exponentialRampToValueAtTime(.15,now+revealAt+.05);bg.gain.exponentialRampToValueAtTime(.001,now+revealAt+.82);bell.connect(bg);bg.connect(ctx.destination);bell.start(now+revealAt);bell.stop(now+revealAt+.9);
     }
   }catch(e){}
 }
 function startPackWalkout(p){
   const el=document.getElementById('pack-walkout');if(!el)return;
   const tier=cardTierById(p.cardTier)||CARD_TIERS[CARD_TIERS.length-1];
-  const premium=(p.price||0)>1000000;
-  el.className='pack-walkout active'+(premium?' premium':'');
+  const level=packWalkoutLevel(p);
+  const premium=level!=='standard';
+  const mega=level==='mega';
+  const stats=p.stats||{};
+  el.className='pack-walkout active'+(premium?' premium':'')+(mega?' mega':'');
   el.style.color=tier.color;
   el.innerHTML=premium?`
-    <div class="walk-tunnel"></div><div class="walk-spot"></div>
+    <div class="walk-tunnel"></div>
+    <div class="walk-rail left"></div><div class="walk-rail right"></div>
+    <div class="walk-gate"></div><div class="walk-spot"></div><div class="walk-flash"></div>
+    <div class="walk-intro">${mega?'ULTIMATE WALKOUT':'WALKOUT'}</div>
+    ${[...Array(8)].map((_,i)=>`<span class="walk-smoke" style="left:${12+i*11}%;bottom:${rnd(3,19)}%;animation-delay:${(.55+i*.12).toFixed(2)}s;"></span>`).join('')}
+    <div class="walk-figure">
+      <span class="head"></span><span class="body"></span>
+      <span class="arm left"></span><span class="arm right"></span>
+      <span class="leg left"></span><span class="leg right"></span>
+      <span class="shirt">${p.ovr||''}</span>
+    </div>
+    <div class="walk-caption">${mega?'ICON ARRIVAL':'STAR ARRIVAL'}<small>FROM THE TUNNEL</small></div>
     <div class="walk-reveal-stack">
       <div class="walk-stage flag"><div class="walk-label">Nationality</div>${p.nat||'🌍'}</div>
       <div class="walk-stage pos"><div class="walk-label">Position</div>${p.pos}</div>
@@ -89,8 +117,37 @@ function startPackWalkout(p){
         <div class="walk-name">${playerCardName(p)}</div>
         <div class="walk-tier">${tier.label}</div>
       </div>
+    </div>
+    <div class="walk-final">
+      <span class="walk-final-beam b1"></span><span class="walk-final-beam b2"></span>
+      <span class="walk-final-beam b3"></span><span class="walk-final-beam b4"></span>
+      <div class="walk-final-title">${mega?'ULTIMATE ICON REVEAL':'STAR PLAYER REVEAL'}</div>
+      <div class="walk-final-platform"></div>
+      <div class="walk-final-stats">
+        <div class="walk-final-stat">${stats.PAC||p.ovr}<small>PAC</small></div>
+        <div class="walk-final-stat">${stats.SHO||p.ovr}<small>SHO</small></div>
+        <div class="walk-final-stat">${stats.PAS||p.ovr}<small>PAS</small></div>
+        <div class="walk-final-stat">${stats.DRI||p.ovr}<small>DRI</small></div>
+      </div>
+      <div class="walk-final-card">
+        <div class="walk-final-ovr">${p.ovr}</div>
+        <div class="walk-final-pos">${p.pos}</div>
+        <div class="walk-final-flag">${p.nat||'🌍'}</div>
+        ${playerFace(p,'pack-face')}
+        <div class="walk-final-name">${playerCardName(p)}</div>
+        <div class="walk-final-tier">${mega?'ICON · ':''}${tier.label}</div>
+      </div>
+      <div class="walk-final-model">
+        <span class="head"></span><span class="body"></span>
+        <span class="arm left"></span><span class="arm right"></span>
+        <span class="leg left"></span><span class="leg right"></span>
+        <span class="shirt">${p.ovr||''}</span>
+      </div>
     </div>`:`
-    <div class="walk-tunnel"></div><div class="walk-spot"></div>
+    <div class="walk-tunnel"></div>
+    <div class="walk-rail left"></div><div class="walk-rail right"></div>
+    <div class="walk-gate"></div><div class="walk-spot"></div><div class="walk-flash"></div>
+    <div class="walk-intro">PLAYER REVEAL</div>
     <div class="walk-card">
       ${playerFace(p,'pack-face')}
       <div class="walk-ovr">OVR ${p.ovr}</div>
@@ -101,15 +158,27 @@ function startPackWalkout(p){
     const f=document.createElement('span');
     f.className='firework';
     f.style.left=rnd(10,90)+'%';f.style.top=rnd(10,74)+'%';f.style.animationDelay=(i*.06)+'s';
+    if(premium)f.style.animationDelay=(3.64+i*.065)+'s';
     el.appendChild(f);
+  }
+  if(premium){
+    for(let i=0;i<34;i++){
+      const c=document.createElement('span');
+      c.className='confetti';
+      c.style.left=rnd(2,98)+'%';
+      c.style.color=i%3===0?'#fff':tier.color;
+      c.style.animationDelay=(3.52+i*.035)+'s';
+      el.appendChild(c);
+    }
   }
 }
 function revealNextPackCard(){
   if(packAnimating||packRevealIndex>=packBuf.length)return;
   const p=packBuf[packRevealIndex];
+  const walkoutLevel=packWalkoutLevel(p);
   packAnimating=true;
   startPackWalkout(p);
-  playPackSuspense(p.cardTier);
+  playPackSuspense(p.cardTier,walkoutLevel);
   renderPackReveal();
   setTimeout(()=>{
     packRevealIndex++;
@@ -117,7 +186,7 @@ function revealNextPackCard(){
     const walk=document.getElementById('pack-walkout');
     if(walk){walk.className='pack-walkout';walk.innerHTML='';}
     renderPackReveal();
-  },(p.price||0)>1000000?2850:1450);
+  },walkoutLevel==='mega'?7200:walkoutLevel==='premium'?6500:2050);
 }
 function legendPackPlayer(){
   const base=LEGENDS[rnd(0,LEGENDS.length-1)];
