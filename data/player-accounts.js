@@ -31,6 +31,7 @@
     playerId:a.playerId,
     username:a.username,
     provider:a.provider,
+    banned:!!a.banned,
     passwordDisplay:a.provider==='local'?'••••••••':'เชื่อมต่อผ่าน '+a.provider,
     createdAt:a.createdAt,
     profile:{...(a.profile||{})},
@@ -109,6 +110,10 @@
         return null;
       }
       const account=load().find(a=>a.playerId===session.playerId);
+      if(account?.banned){
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
       return publicAccount(account);
     }catch(e){return null;}
   };
@@ -179,6 +184,7 @@
     const accounts=load();
     const account=accounts.find(a=>a.username.toLowerCase()===username.toLowerCase()&&a.provider==='local');
     if(!account||account.passwordHash!==await hash(password))throw new Error('ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง');
+    if(account.banned)throw new Error('ไอดีนี้ถูกแบนโดยแอดมิน');
     return startSession(account);
   };
   window.SuperkickAccounts={

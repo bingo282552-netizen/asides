@@ -34,22 +34,22 @@ function renderShop(){
     <div class="card" style="text-align:center;border-color:var(--muted);">
       <div style="font-size:2rem;">📦</div><div style="font-weight:700;margin:4px 0;">Bronze Pack</div>
       <div class="tm" style="font-size:.72rem;">75% Bronze · 20% Silver · 5% Gold</div>
-      <button class="btn bgh" style="margin-top:6px;" onclick="buyPackCoins('bronze',50)">🪙 50</button>
+      <button class="btn bgh" style="margin-top:6px;" onclick="buyPackCoins('bronze',50)">ซื้อเข้า Inventory · 🪙 50</button>
     </div>
     <div class="card" style="text-align:center;border-color:#c0c7d1;">
       <div style="font-size:2rem;">💎</div><div style="font-weight:700;margin:4px 0;">Silver Pack</div>
       <div class="tm" style="font-size:.72rem;">80% Silver · 18% Gold · 2% Elite</div>
-      <button class="btn bbl" style="margin-top:6px;" onclick="buyPackCoins('silver',120)">🪙 120</button>
+      <button class="btn bbl" style="margin-top:6px;" onclick="buyPackCoins('silver',120)">ซื้อเข้า Inventory · 🪙 120</button>
     </div>
     <div class="card" style="text-align:center;border-color:var(--gold);">
       <div style="font-size:2rem;">🏆</div><div style="font-weight:700;margin:4px 0;">Gold Pack</div>
       <div class="tm" style="font-size:.72rem;">80% Gold · 17% Elite · 3% Icon</div>
-      <button class="btn bg" style="margin-top:6px;" onclick="buyPackCoins('gold',200)">🪙 200</button>
+      <button class="btn bg" style="margin-top:6px;" onclick="buyPackCoins('gold',200)">ซื้อเข้า Inventory · 🪙 200</button>
     </div>
     <div class="card" style="text-align:center;border-color:var(--purple);">
       <div style="font-size:2rem;">👑</div><div style="font-weight:700;margin:4px 0;">Legend Pack</div>
       <div class="tm" style="font-size:.72rem;">โอกาสสุ่มตำนาน · ซื้อด้วย Coins เท่านั้น</div>
-      <button class="btn bpu" style="margin-top:6px;" onclick="buyPackCoins('legend',450)">🪙 450</button>
+      <button class="btn bpu" style="margin-top:6px;" onclick="buyPackCoins('legend',450)">ซื้อเข้า Inventory · 🪙 450</button>
     </div>`;
 }
 async function startRealTopup(coins,price){
@@ -308,24 +308,15 @@ async function completeSlipPayment(selectedCoins,selectedPrice){
 function buyShopItem(id,cost){
   if(G.coins<cost){notify(`ต้องการ 🪙${cost}!`,'red');return;}
   G.coins-=cost;
-  if(id==='rename_team'){const n=prompt('ชื่อทีมใหม่:',G.teamName);if(n){G.teamName=n;updateHUD();}}
-  else if(id==='rename_stadium'){notify('🏟️ เปลี่ยนชื่อสนามแล้ว','green');}
-  else if(id==='reset_youth'){G.youth=[];notify('🔄 รีเซ็ตอคาเดมีแล้ว','green');}
-  else if(id==='reset_tactics'){G.formationFamiliarity={};notify('📋 รีเซ็ตแทคติกแล้ว','green');}
-  else if(id==='morale_boost'){G.squad.forEach(p=>p.morale=Math.min(100,p.morale+20));notify('💊 Morale ทั้งทีม +20!','green');}
-  else if(id==='fitness_boost'){G.squad.forEach(p=>p.fitness=Math.min(100,p.fitness+30));notify('⚡ Fitness ทั้งทีม +30!','green');}
-  else if(id==='scout_slot'){G.staff.scout=Math.min(5,G.staff.scout+1);notify('🔍 Scout Slot เพิ่มแล้ว!','green');}
-  else if(id==='contract_freeze'){notify('📄 Contract Freeze เปิดใช้งาน 1 ฤดูกาล!','green');}
-  else if(id==='squad_slots'){G.squadSlots=squadLimit()+5;notify(`➕ ขนาดทีมเพิ่มเป็น ${G.squadSlots} คนแล้ว`,'green');}
+  addShopItemToInventory(id,1);
+  notify('🎁 ซื้อแล้ว ของถูกส่งเข้า Inventory','green');
   updateHUD();
+  saveGame();
   renderShop();
 }
 function buyPackCoins(type,cost){
   const count=getPackOpenCount();
   const total=cost*count;
-  if(!hasSquadSlot(count)){notify(squadFullMessage(),'red');return;}
   if(G.coins<total){notify(`ต้องการ 🪙${total}!`,'red');return;}
-  G.coins-=total;
-  goPage('packs');
-  openPack(type,true);
+  buyPackToInventory(type,'coins',cost);
 }

@@ -8,7 +8,7 @@ const {REPUTATION_LEVELS,LEGACY_LEAGUES_DATA,LEAGUES_DATA}=SUPERKICK_LEAGUE_CATA
 // ===== GAME STATE =====
 let G={
   economyVersion:2,money:STARTING_MONEY,fans:28000,week:1,league:'EPL',teamName:'FC Bangkok United',stadiumName:'Bangkok Arena',teamColor:'#f0b429',season:1,
-  squad:[],youth:[],marketPlayers:[],
+  squad:[],youth:[],marketPlayers:[],inventory:[],
   formation:'433',tacStyle:'balanced',formationFamiliarity:{},currentFormation:'433',
   slots:{},
   leagueTable:[],topScorers:{},topAssists:{},yellowCards:{},redCards:{},playerRatings:{},
@@ -46,6 +46,7 @@ let G={
   onlineTournament:{active:false,round:0,prize:0},
   onlineMarket:[],onlineSellListings:[],
   paymentHistory:[],usedSlipHashes:{},usedSlipVisuals:[],
+  adminInbox:[],
   awards:{ballonDor:[],goldenBoot:[],goldenGlove:[],toty:[],bestManager:[]},
   legacySeasons:[],
   managerAge:35,
@@ -61,7 +62,7 @@ let G={
 function freshState(overrides={}){
   return {
     economyVersion:2,money:STARTING_MONEY,fans:28000,week:1,league:'EPL',teamName:'FC Bangkok United',stadiumName:'Bangkok Arena',teamColor:'#f0b429',season:1,
-    squad:[],youth:[],marketPlayers:[],
+    squad:[],youth:[],marketPlayers:[],inventory:[],
     formation:'433',tacStyle:'balanced',formationFamiliarity:{},currentFormation:'433',
     slots:{},
     leagueTable:[],topScorers:{},topAssists:{},yellowCards:{},redCards:{},playerRatings:{},
@@ -98,6 +99,7 @@ function freshState(overrides={}){
     onlineTournament:{active:false,round:0,prize:0},
     onlineMarket:[],onlineSellListings:[],
     paymentHistory:[],usedSlipHashes:{},usedSlipVisuals:[],
+    adminInbox:[],
     awards:{ballonDor:[],goldenBoot:[],goldenGlove:[],toty:[],bestManager:[]},
     legacySeasons:[],
     managerAge:35,
@@ -123,6 +125,8 @@ const {CARD_TIERS,CARD_PACKS,CARD_TIER_PRICE_RANGES,MARKET_POOL_SIZE,MARKET_POOL
 const {commonsPhoto,REAL_PLAYERS}=SUPERKICK_PLAYER_CATALOG;
 function ensureGameDefaults(){
   G.squadSlots=G.squadSlots||BASE_SQUAD_LIMIT;
+  G.inventory=Array.isArray(G.inventory)?G.inventory:[];
+  G.adminInbox=Array.isArray(G.adminInbox)?G.adminInbox:[];
   G.setPieceTakers=G.setPieceTakers||{penalty:''};
   G.tacticPlan={press:5,width:5,tempo:5,defline:5,counter:5,passing:5,creativity:5,aggression:5,overlap:5,...(G.tacticPlan||{})};
   G.cupRuns=G.cupRuns||{domestic:{active:true,round:1,alive:true},continental:{active:!!G.championsQualified,round:0,alive:!!G.championsQualified}};
@@ -352,6 +356,8 @@ function goPage(id){
   if(id==='relations'){genRelations();renderWonderkids();}
   if(id==='online')renderOnline();
   if(id==='shop')renderShop();
+  if(id==='inventory')renderInventory();
+  if(id==='admin')renderAdmin();
   if(id==='legacy')renderLegacy();
 }
 function swTab(page,tab,btn=null){

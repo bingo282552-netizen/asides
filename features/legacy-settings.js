@@ -12,6 +12,12 @@
         <div class="tm mbm">เปลี่ยนลีกได้หลังเล่นจบฤดูกาล และก่อนเริ่มนัดแรกของฤดูกาลใหม่</div>
         <div id="legacy-leagues-grid" class="g3"></div>
       </div>`);
+    byId('pg-legacy')?.insertAdjacentHTML('beforeend',`
+      <div class="card" style="border-color:var(--red);">
+        <div class="ct" style="color:var(--red);">Admin Mode</div>
+        <div class="tm mbm">สำหรับเจ้าของเกมเท่านั้น ต้องกรอกชื่อและรหัสผ่านก่อนเข้าหน้าจัดการ</div>
+        <button class="btn br" style="width:100%;" onclick="openAdminLogin()">admin mode</button>
+      </div>`);
   }
   function render(){
     SuperkickAuth.renderAccountCard();

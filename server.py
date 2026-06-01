@@ -24,6 +24,9 @@ MAX_BODY_BYTES = int(os.environ.get("SUPERKICK_MAX_BODY_BYTES", str(2 * 1024 * 1
 MAX_SAVE_BYTES = int(os.environ.get("SUPERKICK_MAX_SAVE_BYTES", str(2 * 1024 * 1024)))
 MAX_USERNAME_LEN = 24
 MAX_TEAM_NAME_LEN = 32
+ADMIN_USERNAME = os.environ.get("SUPERKICK_ADMIN_USER", "BingoBall")
+ADMIN_PASSWORD = os.environ.get("SUPERKICK_ADMIN_PASSWORD", "28122552bingoO/")
+ADMIN_SESSION_MAX_AGE = 8 * 60 * 60
 
 FIRST = ["Ari", "Niran", "Mateo", "Leo", "Noah", "Kai", "Milan", "Rafa", "Tao", "Dani"]
 LAST = ["Storm", "Silva", "Kittisak", "Morgan", "Costa", "Reed", "Tanaka", "Berg", "King", "Santos"]
@@ -105,6 +108,8 @@ def blank_db():
     return {
         "players": [],
         "sessions": {},
+        "adminSessions": {},
+        "adminLog": [],
         "market": [],
         "matches": [],
         "rooms": [],
@@ -145,6 +150,7 @@ def public_player(player):
         "createdAt": player["createdAt"],
         "profile": sanitize_profile(player.get("profile", {})),
         "ranked": player.get("ranked", {"elo": 1200, "wins": 0, "draws": 0, "losses": 0}),
+        "banned": bool(player.get("banned", False)),
         "passwordDisplay": "เก็บ hash บนเซิร์ฟเวอร์",
     }
 
@@ -712,6 +718,192 @@ def snapshot(db):
     return {"type": "snapshot", "market": db["market"][:12], "managers": ranking(db), "rooms": room_list(db)}
 
 
+def admin_prune_sessions(db):
+    sessions = db.setdefault("adminSessions", {})
+    now = time.time()
+    for token, session in list(sessions.items()):
+        if now - session.get("createdAt", 0) > ADMIN_SESSION_MAX_AGE:
+            sessions.pop(token, None)
+
+
+def admin_authorized(db, headers):
+    admin_prune_sessions(db)
+    auth = headers.get("Authorization", "")
+    token = auth.replace("Bearer ", "", 1).strip()
+    session = db.setdefault("adminSessions", {}).get(token)
+    return bool(session and session.get("username") == ADMIN_USERNAME)
+
+
+def save_summary(data):
+    data = data if isinstance(data, dict) else {}
+    inventory = data.get("inventory") if isinstance(data.get("inventory"), list) else []
+    squad = data.get("squad") if isinstance(data.get("squad"), list) else []
+    return {
+        "teamName": clean_text(data.get("teamName") or "ยังไม่มีทีม", MAX_TEAM_NAME_LEN),
+        "money": safe_int(data.get("money", 0), 0, 0),
+        "coins": safe_int(data.get("coins", 0), 0, 0),
+        "season": safe_int(data.get("season", 1), 1, 1),
+        "week": safe_int(data.get("week", 1), 1, 1),
+        "squadCount": len(squad),
+        "squadSlots": save_squad_limit(data),
+        "inventoryCount": sum(safe_int(item.get("qty", 1), 1, 1, 999) for item in inventory if isinstance(item, dict)),
+    }
+
+
+def admin_public_player(player):
+    save_data = parse_save(player.get("save", ""))
+    return {
+        "playerId": player.get("playerId", ""),
+        "username": clean_text(player.get("username", ""), MAX_USERNAME_LEN),
+        "provider": "server",
+        "createdAt": player.get("createdAt", 0),
+        "profile": sanitize_profile(player.get("profile", {})),
+        "ranked": player.get("ranked", {"elo": 1200, "wins": 0, "draws": 0, "losses": 0}),
+        "banned": bool(player.get("banned", False)),
+        "summary": save_summary(save_data),
+    }
+
+
+def admin_log(db, action, target_id, detail=None):
+    row = {
+        "at": now_ms(),
+        "admin": ADMIN_USERNAME,
+        "action": clean_text(action, 32),
+        "targetId": clean_text(target_id, 32),
+        "detail": detail or {},
+    }
+    db.setdefault("adminLog", []).insert(0, row)
+    db["adminLog"] = db["adminLog"][:100]
+    return row
+
+
+def ensure_admin_save(player):
+    data = parse_save(player.get("save", ""))
+    if not data:
+        profile = player.get("profile", {})
+        data = {
+            "money": 0,
+            "coins": 0,
+            "squad": [],
+            "inventory": [],
+            "squadSlots": 50,
+            "teamName": profile.get("teamName") or player.get("username") or "FC Admin",
+            "season": 1,
+            "week": 1,
+        }
+    data["money"] = safe_int(data.get("money", 0), 0, 0)
+    data["coins"] = safe_int(data.get("coins", 0), 0, 0)
+    data["squad"] = data.get("squad") if isinstance(data.get("squad"), list) else []
+    data["inventory"] = data.get("inventory") if isinstance(data.get("inventory"), list) else []
+    data["squadSlots"] = save_squad_limit(data)
+    return data
+
+
+def store_admin_save(player, data):
+    player["save"] = save_to_string(data)
+    profile = player.get("profile", {})
+    profile = {
+        **profile,
+        "teamName": clean_text(data.get("teamName") or profile.get("teamName") or player.get("username"), MAX_TEAM_NAME_LEN),
+        "money": safe_int(data.get("money", 0), 0, 0),
+        "season": safe_int(data.get("season", 1), 1, 1),
+        "week": safe_int(data.get("week", 1), 1, 1),
+    }
+    player["profile"] = {**profile, "teamStrength": server_team_strength(player)}
+
+
+def admin_add_inventory_pack(data, pack_type, qty):
+    pack_type = clean_text(pack_type, 16).lower()
+    if pack_type not in {"bronze", "silver", "gold", "legend"}:
+        pack_type = "bronze"
+    qty = safe_int(qty, 1, 1, 99)
+    stack_key = f"pack:{pack_type}"
+    inventory = data.setdefault("inventory", [])
+    existing = next((item for item in inventory if isinstance(item, dict) and item.get("stackKey") == stack_key), None)
+    if existing:
+        existing["qty"] = safe_int(existing.get("qty", 1), 1, 1, 999) + qty
+        existing["updatedAt"] = now_ms()
+    else:
+        inventory.insert(0, {
+            "id": secrets.token_hex(6),
+            "kind": "pack",
+            "packType": pack_type,
+            "label": f"{pack_type.title()} Pack",
+            "icon": "🎴",
+            "source": "admin_grant",
+            "stackKey": stack_key,
+            "qty": qty,
+            "createdAt": now_ms(),
+        })
+
+
+def admin_make_player(raw):
+    raw = raw if isinstance(raw, dict) else {}
+    pos = clean_text(raw.get("pos") or "ST", 8).upper()
+    if pos not in POS:
+        pos = "ST"
+    ovr = safe_int(raw.get("ovr", 88), 88, 60, 99)
+    tier = clean_text(raw.get("tier") or "gold", 16).lower()
+    if tier not in {"bronze", "silver", "gold", "elite", "icon"}:
+        tier = "gold"
+    name = clean_text(raw.get("name"), 48)
+    if not name:
+        name = f"{random.choice(FIRST)} {random.choice(LAST)}"
+    player_id = secrets.token_hex(6)
+    stats = {key: ovr for key in ("PAC", "ACC", "STA", "STR", "JMP", "PAS", "CRS", "DRI", "CON", "SHO", "TAC", "POS", "VIS", "DEC", "COM", "AGR", "MRK", "REF", "HAN")}
+    price = max(50000, ovr * ovr * 120)
+    potential = max(ovr, min(99, ovr + random.randint(0, 8)))
+    return {
+        "id": player_id,
+        "playerId": player_id,
+        "name": name,
+        "baseName": name,
+        "nat": random.choice(NATS),
+        "face": "⚽",
+        "photo": "",
+        "pos": pos,
+        "age": random.randint(18, 32),
+        "ovr": ovr,
+        "ca": ovr,
+        "potential": potential,
+        "potentialMin": ovr,
+        "potentialMax": potential,
+        "stats": stats,
+        "traits": [],
+        "personality": "Professional",
+        "cardTier": tier,
+        "cardVersion": tier.title(),
+        "cardName": f"{name} {tier.title()}",
+        "wage": max(1000, ovr * ovr * 5),
+        "price": price,
+        "releaseClause": int(price * 1.5),
+        "contract": 5,
+        "signingBonus": 0,
+        "goalBonus": 0,
+        "cleanSheetBonus": 0,
+        "loyaltyBonus": 0,
+        "goals": 0,
+        "assists": 0,
+        "yellow": 0,
+        "red": 0,
+        "apps": 0,
+        "morale": 90,
+        "fitness": 95,
+        "form": 7,
+        "sharpness": 90,
+        "formHistory": [],
+        "injured": False,
+        "injuryDays": 0,
+        "injuryMatches": 0,
+        "injuryType": "",
+        "suspendedMatches": 0,
+        "rating": 6.5,
+        "matchRatings": [],
+        "acquisition": "admin_grant",
+        "isInitialSquad": False,
+    }
+
+
 def apply_market_purchase_to_save(player, listing):
     save_data = parse_save(player.get("save", ""))
     if not save_data:
@@ -873,6 +1065,8 @@ def auth_user(headers):
         if not session or time.time() - session.get("createdAt", 0) > SESSION_MAX_AGE:
             return None, None
         player = next((p for p in db.get("players", []) if p["playerId"] == session["playerId"]), None)
+        if player and player.get("banned"):
+            return None, None
         return player, token
 
 
@@ -908,6 +1102,8 @@ class Handler(SimpleHTTPRequestHandler):
                 self.json({"error": "unauthorized"}, 401)
             else:
                 self.json({"save": player.get("save", "")})
+        elif parsed.path == "/api/admin/players":
+            self.admin_players()
         elif parsed.path == "/api/health":
             self.json({"ok": True, "db": str(DB_PATH), "time": now_ms()})
         else:
@@ -920,6 +1116,10 @@ class Handler(SimpleHTTPRequestHandler):
                 self.register()
             elif parsed.path == "/api/auth/login":
                 self.login()
+            elif parsed.path == "/api/admin/login":
+                self.admin_login()
+            elif parsed.path == "/api/admin/player/action":
+                self.admin_player_action()
             elif parsed.path == "/api/online/ranked":
                 self.ranked()
             elif parsed.path == "/api/online/friendly":
@@ -1023,6 +1223,8 @@ class Handler(SimpleHTTPRequestHandler):
             player = next((p for p in db.get("players", []) if p["username"].lower() == username.lower()), None)
             if not player:
                 return self.json({"error": "ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง"}, 401)
+            if player.get("banned"):
+                return self.json({"error": "ไอดีนี้ถูกแบนโดยแอดมิน"}, 403)
             _, digest = hash_password(password, player["salt"])
             if digest != player["passwordHash"]:
                 return self.json({"error": "ชื่อไอดีหรือรหัสผ่านไม่ถูกต้อง"}, 401)
@@ -1030,6 +1232,104 @@ class Handler(SimpleHTTPRequestHandler):
             db.setdefault("sessions", {})[token] = {"playerId": player["playerId"], "createdAt": time.time()}
             save_db(db)
         self.json({"token": token, "account": public_player(player)})
+
+    def admin_login(self):
+        data = self.body()
+        username = clean_text(data.get("username", ""), 32)
+        password = str(data.get("password", ""))
+        if username != ADMIN_USERNAME or password != ADMIN_PASSWORD:
+            return self.json({"error": "ชื่อหรือรหัสผ่านแอดมินไม่ถูกต้อง"}, 401)
+        with DB_LOCK:
+            db = load_db()
+            admin_prune_sessions(db)
+            token = secrets.token_urlsafe(32)
+            db.setdefault("adminSessions", {})[token] = {"username": ADMIN_USERNAME, "createdAt": time.time()}
+            admin_log(db, "admin_login", "admin")
+            save_db(db)
+        self.json({"token": token, "mode": "backend"})
+
+    def admin_players(self):
+        with DB_LOCK:
+            db = load_db()
+            if not admin_authorized(db, self.headers):
+                return self.json({"error": "admin_unauthorized"}, 401)
+            rows = [admin_public_player(player) for player in db.get("players", [])]
+            rows.sort(key=lambda row: row.get("createdAt", 0), reverse=True)
+            log = db.get("adminLog", [])[:50]
+            save_db(db)
+        self.json({"players": rows, "log": log})
+
+    def admin_player_action(self):
+        data = self.body()
+        target_id = clean_text(data.get("targetId") or "", 32)
+        action = clean_text(data.get("action") or "", 32)
+        with DB_LOCK:
+            db = load_db()
+            if not admin_authorized(db, self.headers):
+                return self.json({"error": "admin_unauthorized"}, 401)
+            target = player_by_id(db, target_id)
+            if not target:
+                return self.json({"error": "ไม่พบผู้เล่นนี้"}, 404)
+            old_id = target.get("playerId")
+            save_data = ensure_admin_save(target)
+            detail = {}
+            if action == "ban":
+                target["banned"] = True
+                db["sessions"] = {token: session for token, session in db.get("sessions", {}).items() if session.get("playerId") != old_id}
+            elif action == "unban":
+                target["banned"] = False
+            elif action == "add_money":
+                amount = safe_int(data.get("amount", 0), 0, 0, 999_999_999)
+                save_data["money"] = safe_int(save_data.get("money", 0), 0, 0) + amount
+                detail["amount"] = amount
+            elif action == "add_coins":
+                amount = safe_int(data.get("amount", 0), 0, 0, 999_999)
+                save_data["coins"] = safe_int(save_data.get("coins", 0), 0, 0) + amount
+                detail["amount"] = amount
+            elif action == "add_player":
+                player_card = admin_make_player(data.get("player") or {})
+                save_data.setdefault("squad", []).append(player_card)
+                detail["player"] = player_card.get("name")
+            elif action == "add_pack":
+                pack_type = clean_text(data.get("packType") or "bronze", 16).lower()
+                qty = safe_int(data.get("qty", 1), 1, 1, 99)
+                admin_add_inventory_pack(save_data, pack_type, qty)
+                detail = {"packType": pack_type, "qty": qty}
+            elif action == "change_id":
+                new_id = clean_text(data.get("newPlayerId") or "", 18)
+                if not re.fullmatch(r"[A-Za-z0-9_-]{4,18}", new_id or ""):
+                    return self.json({"error": "เลขไอดีใหม่ต้องเป็นตัวอักษร/ตัวเลข 4-18 ตัว"}, 400)
+                if player_by_id(db, new_id):
+                    return self.json({"error": "เลขไอดีนี้ถูกใช้แล้ว"}, 409)
+                target["playerId"] = new_id
+                for session in db.get("sessions", {}).values():
+                    if session.get("playerId") == old_id:
+                        session["playerId"] = new_id
+                for room in db.get("rooms", []):
+                    if room.get("hostId") == old_id:
+                        room["hostId"] = new_id
+                    for participant_item in room.get("participants", []):
+                        if participant_item.get("playerId") == old_id:
+                            participant_item["playerId"] = new_id
+                for match in db.get("matches", []):
+                    if match.get("playerId") == old_id:
+                        match["playerId"] = new_id
+                detail = {"oldId": old_id, "newId": new_id}
+            else:
+                return self.json({"error": "ไม่รู้จักคำสั่งแอดมิน"}, 400)
+            store_admin_save(target, save_data)
+            admin_log(db, action, target.get("playerId"), detail)
+            rows = [admin_public_player(player) for player in db.get("players", [])]
+            rows.sort(key=lambda row: row.get("createdAt", 0), reverse=True)
+            payload = {
+                "target": admin_public_player(target),
+                "players": rows,
+                "log": db.get("adminLog", [])[:50],
+                "save": target.get("save", ""),
+            }
+            save_db(db)
+        broadcast(snapshot(load_db()))
+        self.json(payload)
 
     def write_save(self):
         player, _ = auth_user(self.headers)

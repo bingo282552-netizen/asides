@@ -11,6 +11,7 @@
 - ไอดีและเซฟจะอยู่เฉพาะ browser และอุปกรณ์ที่สมัคร
 - Ranked, Friendly และตลาดออนไลน์จะจำลองในเครื่อง
 - ห้องเล่นกับเพื่อนข้ามอุปกรณ์ต้องมี backend แยกต่างหาก
+- Inventory ใช้งานได้ปกติ แต่ Admin Mode จะเห็นเฉพาะบัญชีที่อยู่ใน browser นั้น
 
 อย่าอัปโหลดไฟล์ `data/online-db*.json` เพราะมีข้อมูลบัญชีและ session ของผู้เล่น
 
@@ -33,3 +34,5 @@ window.SUPERKICK_DEPLOYMENT_CONFIG = {
 ฐานข้อมูลของ `server.py` จะถูกเก็บนอก repository ที่ `~/.fm-kick/online-db.json`
 หรือกำหนดตำแหน่งเองด้วย environment variable `SUPERKICK_DB_PATH`
 
+Admin Mode อยู่ท้ายหน้า Legacy ใช้สำหรับจัดการผู้เล่นในฐานข้อมูล backend ทั้งหมด
+เช่น แบน เสกเงิน/Coins ให้นักเตะ เปลี่ยนเลขไอดี และส่งแพ็คเข้า Inventory

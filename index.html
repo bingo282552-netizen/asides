@@ -688,7 +688,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
   <div class="card">
     <div class="ct">🎴 เปิดแพ็คนักเตะ</div>
     <div class="fbtw mbm">
-      <div class="tm">เลือกจำนวนใบที่จะเปิดพร้อมกัน</div>
+      <div class="tm">เลือกจำนวนแพ็คที่จะซื้อเข้า Inventory</div>
       <select id="pack-count" style="width:120px;">
         <option value="1">1 ใบ</option><option value="3">3 ใบ</option><option value="5">5 ใบ</option><option value="10">10 ใบ</option>
       </select>
@@ -699,21 +699,21 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
         <div style="font-weight:700;margin:5px 0;">Bronze Pack</div>
         <div class="tm" style="font-size:.78rem;margin-bottom:6px;">75% Bronze · 20% Silver · 5% Gold</div>
         <div class="tg" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">1M / ใบ</div>
-        <button class="btn bgh" onclick="openPack('bronze')">เปิดแพ็ค</button>
+        <button class="btn bgh" onclick="openPack('bronze')">ซื้อเข้า Inventory</button>
       </div>
       <div class="card" style="text-align:center;border-color:#c0c7d1;">
         <div style="font-size:2rem;">💎</div>
         <div style="font-weight:700;margin:5px 0;">Silver Pack</div>
         <div class="tm" style="font-size:.78rem;margin-bottom:6px;">80% Silver · 18% Gold · 2% Elite</div>
         <div class="tg" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">5M / ใบ</div>
-        <button class="btn bbl" onclick="openPack('silver')">เปิดแพ็ค</button>
+        <button class="btn bbl" onclick="openPack('silver')">ซื้อเข้า Inventory</button>
       </div>
       <div class="card" style="text-align:center;border-color:var(--gold);">
         <div style="font-size:2rem;">🏆</div>
         <div style="font-weight:700;margin:5px 0;">Gold Pack</div>
         <div class="tm" style="font-size:.78rem;margin-bottom:6px;">80% Gold · 18% Elite · 2% Icon</div>
         <div class="tg" style="font-size:1.1rem;font-weight:700;margin-bottom:6px;">10M / ใบ</div>
-        <button class="btn bg" onclick="openPack('gold')">เปิดแพ็ค</button>
+        <button class="btn bg" onclick="openPack('gold')">ซื้อเข้า Inventory</button>
       </div>
     </div>
   </div>
@@ -730,6 +730,25 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
       </div>
     </div>
   </div>
+</div>
+
+<!-- INVENTORY -->
+<div id="pg-inventory" class="pg">
+  <div class="card" style="background:linear-gradient(135deg,#071a2f,#0d1117);border-color:var(--cyan);">
+    <div class="fbtw">
+      <div>
+        <div class="ct" style="color:var(--cyan);">🎒 Inventory</div>
+        <div class="tm" style="font-size:.82rem;">ของที่ซื้อหรือได้รับมาอยู่ตรงนี้ก่อนใช้งาน แพ็คที่ซื้อจะย้ายเข้าคลังทันที</div>
+      </div>
+      <select id="inventory-filter" style="max-width:150px;" onchange="renderInventory()">
+        <option value="all">ทั้งหมด</option>
+        <option value="pack">แพ็ค</option>
+        <option value="shop">ไอเทม</option>
+      </select>
+    </div>
+  </div>
+  <div id="inventory-stats" class="g3"></div>
+  <div id="inventory-list" class="inventory-list"></div>
 </div>
 
 <!-- STADIUM -->
@@ -1034,6 +1053,39 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
   </div>
 </div>
 
+<!-- ADMIN -->
+<div id="pg-admin" class="pg">
+  <div class="card" style="background:linear-gradient(135deg,#21070c,#0d1117);border-color:var(--red);">
+    <div class="fbtw">
+      <div>
+        <div class="ct" style="color:var(--red);">🛡️ Admin Mode</div>
+        <div class="tm" id="admin-mode-status">ยังไม่ได้โหลดข้อมูล</div>
+      </div>
+      <div class="fb gap">
+        <button class="btn bgh bsm" onclick="refreshAdminPlayers()">รีเฟรช</button>
+        <button class="btn br bsm" onclick="adminLogout()">ออกจากแอดมิน</button>
+      </div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="fbtw mbm">
+        <div class="ct">รายชื่อผู้เล่นทั้งหมด</div>
+        <input id="admin-player-search" type="text" placeholder="ค้นหาชื่อ / เลขไอดี" oninput="renderAdminPlayerList()" style="max-width:210px;">
+      </div>
+      <div id="admin-player-list" class="admin-player-list tm">กดรีเฟรชเพื่อโหลดรายชื่อ</div>
+    </div>
+    <div class="card">
+      <div class="ct">จัดการผู้เล่น</div>
+      <div id="admin-player-detail" class="tm">เลือกผู้เล่นทางซ้ายก่อน</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ct">Admin Log</div>
+    <div id="admin-log" class="tm">ยังไม่มี log</div>
+  </div>
+</div>
+
 <!-- MODALS -->
 <div id="modal-player" class="mo"><div class="md"><button class="mc" onclick="closeM('modal-player')">✕</button><div id="mp-content"></div></div></div>
 <div id="modal-performance" class="mo"><div class="md"><button class="mc" onclick="closeM('modal-performance')">✕</button><div id="perf-content"></div></div></div>
@@ -1042,6 +1094,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <div id="modal-halftime" class="mo"><div class="md"><div id="halftime-content"></div></div></div>
 <div id="modal-penalty" class="mo"><div class="md"><div id="penalty-content"></div></div></div>
 <div id="modal-payment" class="mo"><div class="md"><button class="mc" onclick="closeM('modal-payment')">✕</button><div id="payment-content"></div></div></div>
+<div id="modal-admin-login" class="mo"><div class="md"><button class="mc" onclick="closeM('modal-admin-login')">✕</button><div id="admin-login-content"></div></div></div>
 <div id="notif"></div>
 </div><!-- end #game-ui -->
 
@@ -1061,6 +1114,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <script src="engine/players.js"></script>
 <script src="engine/world.js"></script>
 <script src="engine/team-ui.js"></script>
+<script src="engine/inventory.js"></script>
 <script src="engine/match-engine.js"></script>
 <script src="engine/transfers.js"></script>
 <script src="engine/club-management.js"></script>
@@ -1068,6 +1122,7 @@ select:focus,input:focus{outline:1px solid var(--gold);border-color:var(--gold);
 <script src="engine/online.js?v=20260601-2"></script>
 <script src="engine/shop.js"></script>
 <script src="engine/legacy.js"></script>
+<script src="engine/admin.js"></script>
 <script src="engine/landing.js"></script>
 <script src="features/core.js"></script>
 <script src="features/theme.js"></script>

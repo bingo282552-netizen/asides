@@ -11,6 +11,8 @@
     G.worldNews=G.worldNews||[];
     G.onlineManagers=G.onlineManagers||[];
     G.seasonFixtures=G.seasonFixtures||[];
+    G.inventory=Array.isArray(G.inventory)?G.inventory:[];
+    G.adminInbox=Array.isArray(G.adminInbox)?G.adminInbox:[];
     G.canChangeLeague=!!G.canChangeLeague;
     G.matchSubsUsed=G.matchSubsUsed||0;
   }

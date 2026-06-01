@@ -132,15 +132,14 @@ function createPackPlayer(type){
   const tier=rollCardTier(type);
   return tier==='legend'?legendPackPlayer():genPlayer({cardTier:tier});
 }
-function openPack(type,free=false){
+function openPack(type,free=false,options={}){
   const pack=CARD_PACKS[type]||CARD_PACKS.bronze;
-  const count=getPackOpenCount();
-  if(!hasSquadSlot(count)){notify(squadFullMessage(),'red');return;}
+  const count=options.count?clamp(Number(options.count)||1,1,10):getPackOpenCount();
   if(!free){
-    const total=pack.cost*count;
-    if(G.money<total){notify(`เงินไม่พอ! ต้องการ ${fmt(total)}`,'red');return;}
-    G.money-=total;
+    buyPackToInventory(type,'money',pack.cost);
+    return;
   }
+  if(!hasSquadSlot(count)){notify(squadFullMessage(),'red');return;}
   packBuf=[];
   for(let i=0;i<count;i++)packBuf.push(createPackPlayer(type));
   packRevealIndex=0;packAnimating=false;
@@ -156,6 +155,7 @@ function addPackPlayers(){
   notify(`✅ เพิ่ม ${add.length} คนในทีม`,'green');
   document.getElementById('pack-reveal').style.display='none';
   updateHUD();
+  saveGame();
 }
 
 // ===== STADIUM =====
