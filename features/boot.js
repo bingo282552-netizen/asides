@@ -41,7 +41,7 @@
     SuperkickNavigation.rebuild();
     hookCoreFunctions();
     SuperkickAuth.init();
-    document.addEventListener('click',event=>{if(!event.target.closest('.nav-group'))closeNavMenus();},{passive:true});
+    document.addEventListener('click',event=>{if(!event.target.closest('.nav-group')&&!event.target.closest('#mobile-nav-popover'))closeNavMenus();},{passive:true});
     document.addEventListener('pointerdown',()=>{try{SuperkickAudio.ensureAudioContext();startMenuMusic();}catch(e){}},{once:true});
   }
   window.initExperienceFeatures=init;

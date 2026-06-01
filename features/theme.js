@@ -12,6 +12,7 @@
       .nav-group.open .nav-menu{display:block;}
       .nav-menu button{display:block;width:100%;padding:8px 10px;text-align:left;background:none;border:none;color:var(--muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-weight:700;}
       .nav-menu button:hover{color:var(--gold);background:rgba(240,180,41,.08);}
+      .mobile-nav-popover{display:none;}
       .auth-shell{position:fixed;inset:0;z-index:12000;display:none;align-items:center;justify-content:center;padding:1rem;background:radial-gradient(circle at center,#123b25,#050a0e 70%);}
       .auth-shell.open{display:flex;}
       .auth-card{width:min(430px,100%);background:rgba(13,17,23,.96);border:1px solid var(--gold);border-radius:14px;padding:1.2rem;box-shadow:0 24px 80px rgba(0,0,0,.55);}
@@ -45,8 +46,12 @@
         #nav{top:54px;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;}
         .nav-group{flex:0 0 auto;}
         .nb{min-height:44px;padding:10px 12px;}
-        .nav-menu{position:fixed;left:.5rem;right:.5rem;top:98px;max-height:calc(100vh - 108px);overflow-y:auto;border-radius:8px;}
-        .nav-menu button{min-height:44px;}
+        .nav-group.open .nav-menu{display:none;}
+        .mobile-nav-popover{position:fixed;left:.55rem;right:.55rem;max-height:calc(100vh - 112px);overflow-y:auto;padding:6px;background:#111820;border:1px solid var(--border);border-radius:10px;box-shadow:0 16px 36px rgba(0,0,0,.55);z-index:10050;}
+        .mobile-nav-popover.open{display:block;}
+        .mobile-nav-title{padding:8px 10px;color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-weight:800;border-bottom:1px solid var(--border);margin-bottom:4px;}
+        .mobile-nav-popover button{display:block;width:100%;min-height:44px;padding:10px;text-align:left;background:none;border:none;border-radius:7px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.95rem;}
+        .mobile-nav-popover button:hover,.mobile-nav-popover button:active{color:var(--gold);background:rgba(240,180,41,.08);}
         .pg{padding:.7rem .65rem 5rem;}
         .card{padding:.8rem;}
         .g2{grid-template-columns:minmax(0,1fr);}
