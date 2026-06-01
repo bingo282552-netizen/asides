@@ -1,12 +1,21 @@
 // Local offline registration, login, remembered session, and profile display.
 (function(){
   const {byId,esc}=SuperkickExperience;
+  const usesBackend=()=>!!window.SUPERKICK_SERVICE_CONFIG?.online?.enabled;
+  const storageNote=()=>usesBackend()
+    ?'บัญชีนี้เชื่อมกับ backend สามารถใช้เล่นต่อบนอุปกรณ์อื่นได้'
+    :'โหมด GitHub Pages: ไอดีและเซฟจะเก็บใน browser เครื่องนี้';
+  const refreshStorageNote=()=>{
+    const note=byId('auth-storage-note');
+    if(note)note.textContent=storageNote();
+  };
   function inject(){
     document.body.insertAdjacentHTML('beforeend',`
       <div id="auth-shell" class="auth-shell">
         <div class="auth-card">
           <div class="auth-title">FM KICK ID</div>
           <div class="tm">เข้าสู่ระบบเพื่อเล่นต่อ ระบบจะจำการเข้าสู่ระบบไว้ 14 วัน</div>
+          <div id="auth-storage-note" class="tm" style="margin-top:4px;color:var(--cyan);">${storageNote()}</div>
           <div class="auth-tabs">
             <button class="tb active" id="auth-login-tab" onclick="switchAuthPane('login')">เข้าสู่ระบบ</button>
             <button class="tb" id="auth-register-tab" onclick="switchAuthPane('register')">สมัครไอดีใหม่</button>
@@ -60,6 +69,7 @@
       <div class="fbtw mb"><span class="tm">ไอดีผู้เล่น</span><span class="account-id">${esc(account.playerId)}</span></div>
       <div class="fbtw mb"><span class="tm">ชื่อไอดี</span><strong>${esc(account.username)}</strong></div>
       <div class="fbtw mb"><span class="tm">รหัสผ่าน</span><span>${esc(account.passwordDisplay)}</span></div>
+      <div class="fbtw mb"><span class="tm">พื้นที่บันทึก</span><span>${SuperkickAccounts.remoteToken()?'Backend':'Browser เครื่องนี้'}</span></div>
       ${profile.teamName?`<div class="fbtw"><span class="tm">เซฟล่าสุด</span><span>${esc(profile.teamName)} · S${profile.season||1} W${profile.week||1}</span></div>`:''}`:
       '<div class="tm">ยังไม่ได้เข้าสู่ระบบ</div>';
   }
@@ -70,4 +80,5 @@
     if(!account)byId('auth-shell').classList.add('open');
   }
   window.SuperkickAuth={inject,init,renderAccountCard};
+  window.addEventListener('superkick:modechange',refreshStorageNote);
 })();

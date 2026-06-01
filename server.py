@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
-DB_PATH = ROOT / "data" / "online-db.json"
+DB_PATH = Path(os.environ.get("SUPERKICK_DB_PATH", str(Path.home() / ".fm-kick" / "online-db.json"))).expanduser()
 HOST = os.environ.get("SUPERKICK_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SUPERKICK_PORT", "8787"))
 SESSION_MAX_AGE = 14 * 24 * 60 * 60

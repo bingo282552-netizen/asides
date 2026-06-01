@@ -54,7 +54,7 @@ function renderOnline(){
   G.onlineMode=configured?'remote':'local';
   if(status)status.innerHTML=configured
     ?'<span class="tgr">Online backend พร้อมใช้งาน · ห้องเล่นกับเพื่อน sync อัตโนมัติ</span>'
-    :'<span class="tg">Local simulation mode: ตั้งค่า API URL เพื่อเปิดออนไลน์จริง</span>';
+    :'<span class="tg">GitHub Pages mode: เล่นและเซฟใน browser ได้ · ห้องเล่นกับเพื่อนข้ามอุปกรณ์ต้องตั้งค่า backend</span>';
   document.getElementById('ranked-rating').textContent=G.rankedELO;
   document.getElementById('ranked-record').textContent=`W${G.rankedW} D${G.rankedD} L${G.rankedL}`;
   // Global ranking (simulated)

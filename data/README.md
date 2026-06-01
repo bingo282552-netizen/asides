@@ -9,7 +9,8 @@
 - `club-catalog.js`: รายชื่อสโมสร ตำนานทีม AI และชุดนักเตะของทีมใหญ่
 - `simulation.js`: Club DNA เจ้าของทีม สภาพอากาศ กรรมการ และค่าหน้าเริ่มเกม
 - `game-config.js`: รวมคอนฟิกเมนู tutorial และเสียง
-- `services.js`: endpoint สำหรับ online backend และ payment checkout โดยห้ามใส่ private key ฝั่ง browser
+- `deployment-config.js`: URL ของ backend สำหรับ production ถ้าปล่อยว่างจะใช้โหมด GitHub Pages
+- `services.js`: เลือก browser mode หรือ online backend และตั้ง payment checkout โดยห้ามใส่ private key ฝั่ง browser
 - `player-accounts.js`: schema, local account store, โปรไฟล์ล่าสุด และเซฟแยกตามไอดีผู้เล่น
 - รหัสผ่านเก็บเป็น hash เท่านั้น ไม่บันทึกรหัสผ่านจริงลงไฟล์
 
@@ -41,11 +42,11 @@
 - `../engine/legacy.js`: Legacy, dynamic potential และจบฤดูกาล
 - `../engine/landing.js`: หน้าแรก สร้างเกมใหม่ และโหลดเกม
 
-ไฟล์ HTML เป็นโครงหน้าและเรียก script ตามลำดับ จึงยังเปิดเล่นแบบ local file ได้ทันที
+ไฟล์ HTML เป็นโครงหน้าและเรียก script ตามลำดับ จึงยังเปิดเล่นแบบ local file หรือ GitHub Pages ได้ทันที
 
 ## Online And Payments
 
-- โหมด local ยังเล่นได้ทันที โดยหน้า Online จะแสดง `Local simulation mode`
-- ออนไลน์จริงต้องตั้ง `online.enabled`, `online.apiBase` และ `online.wsUrl` ใน `services.js`
+- GitHub Pages สมัครไอดีและเซฟใน browser ได้ทันที แต่ข้อมูลจะไม่ sync ข้ามอุปกรณ์
+- ออนไลน์จริงต้องใส่ URL ของ backend ใน `deployment-config.js`
 - เติมเงินจริงต้องตั้ง `payments.enabled`, `payments.provider` และ `payments.checkoutEndpoint`
 - backend ต้องเป็นผู้ยืนยัน webhook และเพิ่ม Coins หลังรับเงินสำเร็จเท่านั้น ห้ามเพิ่ม Coins จาก browser และห้ามเก็บ secret key ในไฟล์ JavaScript

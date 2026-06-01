@@ -37,14 +37,37 @@
   }:null;
   const remoteConfig=()=>window.SUPERKICK_SERVICE_CONFIG?.online||{};
   const remoteEnabled=()=>!!(remoteConfig().enabled&&remoteConfig().apiBase);
+  const switchToBrowserMode=()=>{
+    const config=remoteConfig();
+    config.enabled=false;
+    config.apiBase='';
+    config.mode='browser';
+    if(window.SUPERKICK_RUNTIME){
+      window.SUPERKICK_RUNTIME.mode='browser';
+      window.SUPERKICK_RUNTIME.backendOrigin='';
+    }
+    window.dispatchEvent(new Event('superkick:modechange'));
+  };
+  const backendUnavailable=error=>!!(
+    error?.backendUnavailable||
+    [404,405,501,502,503,504].includes(error?.status)||
+    error instanceof TypeError
+  );
   const remoteRequest=async(path,options={})=>{
     const cfg=remoteConfig();
     const session=getRemoteSessionRaw();
     const headers={'Content-Type':'application/json',...(options.headers||{})};
     if(session?.token)headers.Authorization=`Bearer ${session.token}`;
-    const response=await fetch(`${cfg.apiBase}${path}`,{...options,headers});
+    let response;
+    try{response=await fetch(`${cfg.apiBase}${path}`,{...options,headers});}
+    catch(error){error.backendUnavailable=true;throw error;}
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'เชื่อมต่อ backend ไม่สำเร็จ');
+    if(!response.ok){
+      const error=new Error(data.error||'เชื่อมต่อ backend ไม่สำเร็จ');
+      error.status=response.status;
+      error.backendUnavailable=[404,405,501,502,503,504].includes(response.status);
+      throw error;
+    }
     return data;
   };
   const getRemoteSessionRaw=()=>{
@@ -131,7 +154,7 @@
         const data=await remoteRequest('/auth/register',{method:'POST',body:JSON.stringify({username,password})});
         return startRemoteSession(data.token,data.account);
       }catch(error){
-        if(String(error.message||'').includes('fetch'))console.warn('Remote register failed, using offline account',error);
+        if(backendUnavailable(error)){switchToBrowserMode();console.warn('Remote register failed, using browser account',error);}
         else throw error;
       }
     }
@@ -148,8 +171,9 @@
         const data=await remoteRequest('/auth/login',{method:'POST',body:JSON.stringify({username,password})});
         return startRemoteSession(data.token,data.account);
       }catch(error){
-        if(!String(error.message||'').includes('fetch'))throw error;
-        console.warn('Remote login failed, trying offline account',error);
+        if(!backendUnavailable(error))throw error;
+        switchToBrowserMode();
+        console.warn('Remote login failed, trying browser account',error);
       }
     }
     const accounts=load();
